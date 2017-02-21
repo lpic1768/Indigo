@@ -1,0 +1,33 @@
+[Format]
+SamplesPerSec=44100
+Channels=2
+BitsPerSample=16
+
+[Track]
+Index=-1
+
+[Track]
+Name=音声トラック 1
+Index=0
+VolumedB=15.1000004
+
+[Element]
+Track=0
+Path=C:\Users\hama9\Downloads\レコーディング (2).wav
+Position=0
+Range=27648,40512
+
+[Track]
+Name=音声トラック 2
+Index=1
+
+[Track]
+Name=BGMトラック 1
+Index=2
+
+[Track]
+Name=BGMトラック 2
+Index=3
+
+[Effect]
+Echo=[Delay]\r\nName=Echo\r\nDelayMs=300.000000\r\nFeedBackPercent=50.000000\r\nStereoOffsetMs=0.000000\r\nCrossFeedBackPercent=0.000000\r\nHighDamp=10.000000\r\nLowDamp=10.000000\r\nWetDryPercent=100.000000\r\nSurroundPercent=0.000000\r\nGaindB=0.000000
