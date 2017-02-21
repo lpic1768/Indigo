@@ -1,185 +1,146 @@
-#include"Unit.h"
-#include "Header.h"
+#include"Basic.h"
 
-FacilityType fType = Farm;
-int	fR = 0;
-int selectType = 0;
-void drawInterface()
+bool destroyPlaceMode = false;
+bool destroyRoadMode = false;
+bool makingVillageMode = false;
+bool makingHouseMode = false;
+bool settingRoadMode = false;
+bool mouseOverInterface = false;
+Chip* previousSelectedChip = NULL;
+Place makingHouseP;
+
+void closeAllInterface()
 {
-	Mouse::ClearTransform();
-	if (Rect(0, 192, 64, 64 * 8).mouseOver) return;
-	if (mouseOveredChip == NULL) return;
-	if (destroyerModeEnabled) destroyerMode();
-	if (makingRoadModeEnabled) makingRoadMode();
-	if (!mouseOveredChip->IsLand) return;
-	if (constructingModeEnabled) constructingMode();
-	if (fallingDownModeEnabled) fallingDownMode();
+	destroyPlaceMode = false;
+	destroyRoadMode = false;
+	makingVillageMode = false;
+	makingHouseMode = false;
+	settingRoadMode = false;
 }
-void constructingMode()
-{
 
-	if (Input::KeyR.clicked) { fR = (fR + 1) % 4; SoundAsset(L"2").play(); }
+bool setButton(const int& _imageNumber, const Point _pos, bool& _flag, const Size _size = Point(64, 64))
+{
+	TextureAsset(Format(L"b", _imageNumber + _flag)).draw(_pos);
+	if (Rect(_pos, _size).mouseOver)
+	{
+		mouseOverInterface = true;
+		if (Input::MouseL.clicked)	//ƒ}ƒEƒXƒ`ƒFƒbƒN
+		{
+			bool f = !_flag;
+			closeAllInterface();
+			_flag = f;
+			return true;
+		}
+	}
+	return false;
+}
+void makeVillage()
+{
+	if (nowSelectedChip == NULL || !nowSelectedChip->isLand) return;
+	if (Input::MouseL.clicked)
+	{
+		SoundAsset(L"6").playMulti();
+		SetVillage(nowSelectedChip->THIS);
+	}
+}
+void makeHouse()
+{
+	if (nowSelectedChip == NULL) return;
+	makingHouseP.enabled = true;
+	if (Input::KeyR.clicked) makingHouseP.r = (makingHouseP.r + 1) % 4;
 	if (Input::KeyE.clicked)
 	{
-		SoundAsset(L"2").play();
-		fType = FacilityType(selectType);
-		selectType = (selectType + 1) % 8;
-	}
-	Point fSize = getFacilitySize(fR, fType);
-	mouseOveredChip = &getChip(mouseOveredChip->Pos.movedBy((-fSize.movedBy(-1, -1) / 2)));
-
-
-	Point size((CHIP_SIZE*fSize).movedBy(-4, -4));
-	Point pos((mouseOveredChip->Pos*CHIP_SIZE).movedBy(2, 2));
-	Color color(HSV(fType * 72, 1.0, 1.0), 128);
-	switch (fType)
-	{
-	case Market: color = Color(200, 200, 0); break;
-	case House: color = Color(72, 159, 72); break;
-	case TreeHouse: color = Color(168, 60, 60); break;
-	case CarpentersHut: color = Color(0, 132, 151); break;
-	case Farm: color = Color(L"#503830"); break;
-	}
-	if (!canBuild(mouseOveredChip, fR, fType)) color = Color(255, 0, 0, 128);
-	else {
-		if (Input::MouseL.pressed) {
-			setFacility(fR, mouseOveredChip, fType);
-			SoundAsset(L"3").play();
-			bool flag = false;
-			for (auto& facility : facilities)
-			{
-				if (!facility.Enabled || facility.getJoinedRegion() != mouseOveredChip->getJoinedRegion()) continue;
-				if (flag && facility.getEntranceChip()->getCenterPos().distanceFrom(mouseOveredChip->getOwnFacility()->getEntranceChip()->getCenterPos()) > 640) continue;
-				setRoad(facility.getEntranceChip(), mouseOveredChip->getOwnFacility()->getEntranceChip());
-				flag = true;
-			}
+		switch (makingHouseP.type)
+		{
+		case House: makingHouseP.type = Market; break;
+		case Market: makingHouseP.type = Farm; break;
+		case Farm: makingHouseP.type = House; break;
 		}
-		color.a = 128;
 	}
-	Rect(pos, size).draw(color).drawFrame(2, 2, Palette::Black);
-	Color roadColor = Palette::Khaki;
-	roadColor.a = 128;
-	Rect(Point(mouseOveredChip->Pos + getEntrancePos(fR, fType))*CHIP_SIZE, Point(CHIP_SIZE, CHIP_SIZE)).draw(roadColor);
-	const int len = 2;
-	switch (fType)
+	makingHouseP.pos = nowSelectedChip->THIS;
+	if (Input::MouseL.clicked && canSetPlace(makingHouseP.r, nowSelectedChip->THIS, makingHouseP.type))
 	{
-	case Market:
-		FontAsset(L"font32")(L"Žsê").drawCenter((pos + size / 2).movedBy(len, -len), Palette::Black);
-		FontAsset(L"font32")(L"Žsê").drawCenter((pos + size / 2), Palette::White);
-		break;
-	case TreeHouse:
-		FontAsset(L"font32")(L"–Ø‚±‚è¬‰®").drawCenter((pos + size / 2).movedBy(len, -len), Palette::Black);
-		FontAsset(L"font32")(L"–Ø‚±‚è¬‰®").drawCenter((pos + size / 2), Palette::White);
-		break;
-	case Brewery:
-		FontAsset(L"font32")(L"ø‘¢Š").drawCenter((pos + size / 2).movedBy(len, -len), Palette::Black);
-		FontAsset(L"font32")(L"ø‘¢Š").drawCenter((pos + size / 2), Palette::White);
-		break;
-	case CarpentersHut:
-		FontAsset(L"font32")(L"‘åH‚Ì‰Æ").drawCenter((pos + size / 2).movedBy(len, -len), Palette::Black);
-		FontAsset(L"font32")(L"‘åH‚Ì‰Æ").drawCenter((pos + size / 2), Palette::White);
-		break;
-	case House:
-		FontAsset(L"font32")(L"Z‹").drawCenter((pos + size / 2).movedBy(len, -len), Palette::Black);
-		FontAsset(L"font32")(L"Z‹").drawCenter((pos + size / 2), Palette::White);
-		break;
-	case Farm:
-		FontAsset(L"font32")(L"”_’n").drawCenter((pos + size / 2).movedBy(len, -len), Palette::Black);
-		FontAsset(L"font32")(L"”_’n").drawCenter((pos + size / 2), Palette::White);
-		break;
-	default:
-		break;
+		SoundAsset(L"3").playMulti();
+		setPlace(makingHouseP.r, nowSelectedChip->THIS, makingHouseP.type);
 	}
 }
-void destroyerMode()
+void setRoad()
 {
-	if (roadDestroyerModeEnabled)
+	if (!Input::MouseL.pressed)
 	{
-		if (roadStartChip == NULL)
+		if (previousSelectedChip != NULL)
 		{
-			if (Input::MouseL.clicked)
+			if (!isConnectedByLand(previousSelectedChip->THIS, nowSelectedChip->THIS)) SoundAsset(L"8").playMulti();
+			else
 			{
-				roadStartChip = mouseOveredChip;
+				SoundAsset(L"3").playMulti();
+				setRoadAToB(previousSelectedChip->THIS, nowSelectedChip->THIS);
 			}
 		}
-		else
-		{
-			Rect(roadStartChip->Pos*CHIP_SIZE, (mouseOveredChip->Pos.movedBy(1, 1) - roadStartChip->Pos)*CHIP_SIZE).draw(Color(255, 0, 0, 128));
-			if (Input::MouseL.released)
-			{
-				int xMin;
-				int yMin;
-				int xMax;
-				int yMax;
-				if (roadStartChip->Pos.x < mouseOveredChip->Pos.x) { xMin = roadStartChip->Pos.x; xMax = mouseOveredChip->Pos.x; }
-				else { xMin = mouseOveredChip->Pos.x; xMax = roadStartChip->Pos.x; }
-				if (roadStartChip->Pos.y < mouseOveredChip->Pos.y) { yMin = roadStartChip->Pos.y; yMax = mouseOveredChip->Pos.y; }
-				else { yMin = mouseOveredChip->Pos.y; yMax = roadStartChip->Pos.y; }
-
-				for (int x = xMin; x <= xMax; x++)
-					for (int y = yMin; y <= yMax; y++)
-						if (chips[x][y].RoadLevel == 1 && chips[x][y].getOwnFacility() == NULL) chips[x][y].RoadLevel = 3;
-
-				updateMapImage(xMin, yMin, xMax, yMax);
-				SoundAsset(L"4").play();
-				roadStartChip = NULL;
-			}
-		}
+		previousSelectedChip = NULL;
 	}
-	if (facilityDestroyerModeEnabled)
+	if (nowSelectedChip == NULL) return;
+	if (Input::MouseL.clicked) previousSelectedChip = nowSelectedChip;
+}
+void destroyPlace()
+{
+	if (selectedPlace == NULL) return;
+	if (Input::MouseL.clicked)
 	{
-
-		if (mouseOveredChip->getOwnFacility() != NULL)
-		{
-			if (Input::MouseL.pressed)
-			{
-				mouseOveredChip->getOwnFacility()->erase();
-				SoundAsset(L"4").play();
-			}
-		}
+		selectedPlace->erase();
+		SoundAsset(L"4").playMulti();
 	}
 }
-void fallingDownMode()
+void destroyRoad()
 {
-	if (mouseOveredChip->IsLand && mouseOveredChip->getJoinedRegion()->NumUnits == 0 && mouseOveredChip->IsInLand &&
-		canBuild(&mouseOveredChip->movedBy(-1, -1), 0, Market))
+	if (!Input::MouseL.pressed)
 	{
-		const Point pos = mouseOveredChip->Pos.movedBy(-1, -1)*CHIP_SIZE;
-		const Point size = Point(CHIP_SIZE, CHIP_SIZE) * 3;
-		Rect(pos, size).draw(Color(255, 0, 0, 128));
-		if (Input::MouseL.clicked)
+		if (previousSelectedChip != NULL)
 		{
-			SoundAsset(L"6").play();
-			setVillage(mouseOveredChip);
+			int xMin, yMin, xMax, yMax;
+			if (previousSelectedChip->THIS.x >= nowSelectedChip->THIS.x) { xMin = nowSelectedChip->THIS.x; xMax = previousSelectedChip->THIS.x; }
+			else { xMin = previousSelectedChip->THIS.x; xMax = nowSelectedChip->THIS.x; }
+			if (previousSelectedChip->THIS.y >= nowSelectedChip->THIS.y) { yMin = nowSelectedChip->THIS.y; yMax = previousSelectedChip->THIS.y; }
+			else { yMin = previousSelectedChip->THIS.y; yMax = nowSelectedChip->THIS.y; }
+			for (int x = xMin; x <= xMax; x++)
+			{
+				for (int y = yMin; y <= yMax; y++)
+				{
+					if (getChip(x, y).isRoad)
+					{
+						getChip(x, y).isRoad = false;
+						mapImage[y][x] = PlainsColor;
+					}
+				}
+			}
+			mapTexture = Texture(mapImage);	//Texture‚É”½‰f
+			SoundAsset(L"4").playMulti();
 		}
+		previousSelectedChip = NULL;
 	}
+	if (nowSelectedChip == NULL) return;
+	if (Input::MouseL.clicked) previousSelectedChip = nowSelectedChip;
 
 }
-Chip* roadStartChip;
-void makingRoadMode()
+void UpdateInterface()
 {
-	if (roadStartChip == NULL)
-	{
-		if (Input::MouseL.clicked)
-		{
-			if (mouseOveredChip->IsLand && mouseOveredChip->getOwnFacility() == NULL) roadStartChip = mouseOveredChip;
-			else SoundAsset(L"8").play();
+	const Rect interfaceRect(Point(0, Window::Size().y - 96), Point(640, 96));
+	interfaceRect.draw(Palette::Gray).drawFrame(8, 0, Palette::Darkgray);
+	if (interfaceRect.mouseOver) mouseOverInterface = true;
+	else mouseOverInterface = false;
 
-		}
-	}
-	else
+	if (setButton(19, Point(16, Window::Size().y - 80), destroyPlaceMode))	SoundAsset(L"11").playMulti();
+	if (setButton(11, Point(80, Window::Size().y - 80), makingVillageMode)) SoundAsset(L"11").playMulti();
+	if (setButton(7, Point(144, Window::Size().y - 80), makingHouseMode))	SoundAsset(L"11").playMulti();
+	if (setButton(15, Point(208, Window::Size().y - 80), settingRoadMode))	SoundAsset(L"11").playMulti();
+	if (setButton(17, Point(272, Window::Size().y - 80), destroyRoadMode))	SoundAsset(L"11").playMulti();
+
+	if (!mouseOverInterface)
 	{
-		Line(roadStartChip->getCenterPos(), mouseOveredChip->getCenterPos()).draw(CHIP_SIZE, Color(255, 0, 0, 128));
-		if (Input::MouseL.released)
-		{
-			if (roadStartChip->getJoinedZone() == mouseOveredChip->getJoinedZone() && mouseOveredChip->IsLand && mouseOveredChip->getOwnFacility() == NULL)
-			{
-				setRoad(roadStartChip, mouseOveredChip, false);
-				SoundAsset(L"3").play();
-				achievements[9]++;
-			}
-			else SoundAsset(L"8").play();
-			roadStartChip = NULL;
-		}
+		if (makingVillageMode) makeVillage();
+		if (makingHouseMode) makeHouse();
+		if (settingRoadMode) setRoad();
+		if (destroyPlaceMode) destroyPlace();
+		if (destroyRoadMode) destroyRoad();
 	}
 }

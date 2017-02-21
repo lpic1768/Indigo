@@ -1,522 +1,224 @@
-#include"Header.h"
+#include"Basic.h"
 
-Chip& getChip(const int& _i)
+Chip chips[ChipXMax][ChipYMax];
+int chipX = ChipXMax;
+int chipY = ChipYMax;
+double sec = 0.0;
+Image mapImage(ChipXMax, ChipYMax);
+
+Chip* nowSelectedChip = NULL;
+Chip* newnowSelectedChip = NULL;
+
+Chip* temp[1000000];
+void	Chip::reset()
 {
-	return chips[_i % CHIP_X_MAX][_i / CHIP_Y_MAX];
+	this->number = 0;
+	this->isRoad = false;
+	this->isLand = false;
+	setPlace(NULL);
+	this->flag = false;
 }
-Chip& getChip(const Vec2& _pos)
+PerlinNoise noise(Random(2048));
+void	Chip::drawGround()
 {
-	return chips[(int)(_pos.x / CHIP_SIZE)][(int)(_pos.y / CHIP_SIZE)];
+	const Rect drawRect = getDrawRect();
+	if (flag) drawRect.draw(Palette::Red);
+	else if (isLand) drawRect.draw(Palette::Green);
+	else drawRect.draw(Palette::Blue);
 }
-void Chip::debugDraw()
+void resetTemp()
 {
-	const Point pos(Pos*CHIP_SIZE);
-	const Point size(CHIP_SIZE, CHIP_SIZE);
-	if (Rect(pos, size).mouseOver) { mouseOveredChip = this; }
-	Color landColor;
-	switch (BiomeType)
+	for (auto& t : temp)
 	{
-	case Ocean:
-		break;
-	case Plains:
-		landColor = Palette::Green;
-		break;
-	case Desert:
-		landColor = Palette::Yellow;
-		break;
-	case Forest:
-		landColor = Palette::Darkgreen;
-		break;
-	case Mountain:
-		landColor = Palette::Gray;
-		break;
-	default:
-		landColor = Palette::White;
-		break;
+		if (t == NULL)  return;
+		t->flag = false;
+		t = NULL;
 	}
-	//if (JoinedRegion == NULL) landColor = Palette::Red;
-	if (!IsLand) return;
-	if (IsInLand) Rect(pos, size).draw(landColor);
-	else
-	{
-		Color color(239, 228, 176);
-		const Vec2 topLeft(Pos*CHIP_SIZE);
-		const Vec2 topRight((Pos*CHIP_SIZE).movedBy(CHIP_SIZE, 0));
-		const Vec2 downLeft((Pos*CHIP_SIZE).movedBy(0, CHIP_SIZE));
-		const Vec2 downRight((Pos*CHIP_SIZE).movedBy(CHIP_SIZE, CHIP_SIZE));
-
-		bool flag = true;
-		for (int i = 0; i < 4; i++) if (!getNearChip(i).IsLand) { flag = false; break; }
-		if (flag) Rect(pos, size).draw(landColor);
-		color = landColor;
-		if (getNearChip(0).IsLand && !getNearChip(0).IsInLand && getNearChip(2).IsLand && !getNearChip(2).IsInLand) { Rect(pos, size).draw(color); }
-		if (getNearChip(1).IsLand && !getNearChip(1).IsInLand && getNearChip(3).IsLand && !getNearChip(3).IsInLand) { Rect(pos, size).draw(color); }
-		if (getNearChip(0).IsLand && !getNearChip(0).IsInLand && getNearChip(1).IsLand && !getNearChip(1).IsInLand) Triangle(topLeft, topRight, downLeft).draw(color);
-		if (getNearChip(1).IsLand && !getNearChip(1).IsInLand && getNearChip(2).IsLand && !getNearChip(2).IsInLand) Triangle(topLeft, topRight, downRight).draw(color);
-		if (getNearChip(2).IsLand && !getNearChip(2).IsInLand && getNearChip(3).IsLand && !getNearChip(3).IsInLand) Triangle(downRight, downLeft, topRight).draw(color);
-		if (getNearChip(3).IsLand && !getNearChip(3).IsInLand && getNearChip(0).IsLand && !getNearChip(0).IsInLand) Triangle(downRight, downLeft, topLeft).draw(color);
-	}
-
 }
-void Chip::drawRoad()
+bool isConnectedByRoad(const Point& _posA, const Point& _posB)
 {
-	if (!IsLand) return;
-	const Point pos(Pos*CHIP_SIZE);
-	const Point size(CHIP_SIZE, CHIP_SIZE);
-	if (RoadLevel == 1)
+	if (!getChip(_posA).isRoad || !getChip(_posB).isRoad) return false;
+	temp[0] = &getChip(_posA);
+	int c = 1;
+	for (int j = 0;; j++)
 	{
-		Color roadColor = Palette::Darkkhaki;
-		const int len = 8;
-		bool flag = true;
+		if (temp[j] == NULL) { resetTemp();  return false; }
+		if (temp[j] == &getChip(_posB)) { resetTemp(); return true; }
 		for (int i = 0; i < 4; i++)
 		{
-			if (getNearChip(i).RoadLevel == 1)
-			{
-				Circle((getCenterPos() + getNearChip(i).getCenterPos()) / 2, CHIP_SIZE / 2 - len).draw(roadColor);
-				flag = false;
-				for (int j = i + 1; j < 4; j++)
-				{
-					if (getNearChip(j).RoadLevel == 1)
-					{
-						Vec2 l1 = (getCenterPos() + getNearChip(i).getCenterPos()) / 2.0;
-						Vec2 l2 = (getCenterPos() + getNearChip(j).getCenterPos()) / 2.0;
-						Line(l1.movedBy((l2 - l1).normalized()*(CHIP_SIZE - len * 2) / 2), l2.movedBy((l1 - l2).normalized()*(CHIP_SIZE - len * 2) / 2)).draw(CHIP_SIZE - len * 2, roadColor);
-					}
-				}
+			if (temp[j]->getNearChip(i).isRoad && !temp[j]->getNearChip(i).flag) {
+				temp[c] = &temp[j]->getNearChip(i);
+				temp[c]->flag = true;
+				c++;
 			}
 		}
-		if (flag) Circle(pos + size / 2, CHIP_SIZE / 2 - len).draw(roadColor);
 	}
 }
-
-/*
-0 : 左
-1 : 上
-2 : 右
-3 : 下
-*/
-Chip& Chip::getNearChip(const int& _value, const bool& _flag)
+bool isConnectedByLand(const Point& _posA, const Point& _posB)
 {
-	if (_flag)
+	if (!getChip(_posA).isLand || !getChip(_posB).isLand) return false;
+	temp[0] = &getChip(_posA);
+	int c = 1;
+	for (int j = 0;; j++)
 	{
-		switch (_value)
+		if (temp[j] == NULL) { resetTemp();  return false; }
+		if (temp[j] == &getChip(_posB)) { resetTemp(); return true; }
+		for (int i = 0; i < 4; i++)
 		{
-		case 0: return getChip(Point(Pos.x - 1, Pos.y));
-		case 1: return getChip(Point(Pos.x - 1, Pos.y - 1));
-		case 2: return getChip(Point(Pos.x, Pos.y - 1));
-		case 3: return getChip(Point(Pos.x + 1, Pos.y - 1));
-		case 4: return getChip(Point(Pos.x + 1, Pos.y));
-		case 5: return getChip(Point(Pos.x + 1, Pos.y + 1));
-		case 6: return getChip(Point(Pos.x, Pos.y + 1));
-		case 7: return getChip(Point(Pos.x - 1, Pos.y + 1));
-		}
-
-	}
-	else
-	{
-		switch (_value)
-		{
-		case 0: return getChip(Point(Pos.x - 1, Pos.y));
-		case 1: return getChip(Point(Pos.x, Pos.y - 1));
-		case 2: return getChip(Point(Pos.x + 1, Pos.y));
-		case 3: return getChip(Point(Pos.x, Pos.y + 1));
+			if (temp[j]->getNearChip(i).isLand && temp[j]->getNearChip(i).getPlace() == NULL && !temp[j]->getNearChip(i).flag) {
+				temp[c] = &temp[j]->getNearChip(i);
+				temp[c]->flag = true;
+				c++;
+			}
 		}
 	}
-	return *this;
 }
-
-bool Chip::canGetNearChip(const int& _value)
+void setRoadAToB(const Point& _posA, const Point& _posB)
 {
-	switch (_value)
-	{
-	case 0: return Pos.x != 0;
-	case 1: return Pos.y != 0;
-	case 2: return Pos.x != CHIP_X_MAX - 1;
-	case 3: return Pos.y != CHIP_Y_MAX - 1;
-	}
-	return false;
-}
-Vec2	Chip::getCenterPos()
-{
-	return Vec2((Pos*CHIP_SIZE).movedBy(CHIP_SIZE / 2, CHIP_SIZE / 2));
-}
-Chip&	Chip::movedBy(const int& _x, const int& _y)
-{
-	return getChip(Pos.movedBy(_x, _y));
-}
-Chip&	Chip::movedBy(const Point& _pos)
-{
-	return getChip(Pos.movedBy(_pos.x, _pos.y));
-}
-Chip& getChip(const Point& _pos)
-{
-	return chips[_pos.x][_pos.y];
-}
-bool	Chip::isFMarket()	//立っている場所がマーケットかどうか
-{
-	if (getOwnFacility() == NULL || getOwnFacility()->BuildProgress != 0 || getOwnFacility()->Type != Market) return false;
-	else return true;
-}
-void	setRoad(Chip* _pos1, Chip* _pos2, const bool _roadLevelFlag)
-{
-	if (_pos1 == _pos2)
-	{
-		_pos1->RoadLevel = 1;
-		return;
-	}
-	if (!_pos1->isConeected(_pos2)) return;
-	bool flag3 = false;
-	if (_pos1->getJoinedRegion() == _pos2->getJoinedRegion()) flag3 = true;
-	//ルート検索プログラム
-	Chip& goal = *_pos2;
-	int j = 10;
-	int c = 0;
-	int numRootChips = 0;
-	goal.RootNumber = 1;
-	goal.Flag = true;
-	rootChips[c] = &goal;
+	if (!isConnectedByLand(_posA, _posB)) return;
+	Chip& goal = getChip(_posB);
+	int j = 3, c = 0;
+	goal.number = 1;
+	goal.flag = true;
+	temp[c] = &goal;
 	c++;
-	numRootChips++;
 	for (int i = 0; i < 4; i++)
 	{
-		if (!goal.getNearChip(i).IsRoad) continue;
-		rootChips[c] = &goal.getNearChip(i);
-		c++; numRootChips++;
-		goal.getNearChip(i).Flag = true;
+		if (!goal.getNearChip(i).canSetRoad()) continue;
+		temp[c] = &goal.getNearChip(i);
+		temp[c]->ang = (i + 2) % 4;
+		c++;
+		goal.getNearChip(i).flag = true;
 	}
-	int xMin, yMin, xMax, yMax;
-	xMin = goal.Pos.x - 2;
-	yMin = goal.Pos.y - 2;
-	xMax = goal.Pos.x + 2;
-	yMax = goal.Pos.y + 2;
 
 	for (;;)
 	{
-		for (int i = 0; i < numRootChips; i++)
+		for (int i = 0; i < c; i++)
 		{
-			if (rootChips[i] == NULL) continue;
+			if (temp[i] == NULL) break;
+			if (temp[i]->number != 0) continue;
 			for (int k = 0; k < 4; k++)
 			{
-				if (rootChips[i]->getNearChip(k).RootNumber != 0)
+				if (temp[i]->getNearChip(k).number != 0)
 				{
-					if (rootChips[i]->getNearChip(k).RoadAng == k)	//距離は10
+					if ((temp[i]->getNearChip(k).ang == k && j >= 3 + temp[i]->getNearChip(k).number) ||
+						(temp[i]->getNearChip(k).ang != k && j >= 2 + temp[i]->getNearChip(k).number))
 					{
-						if (j >= 3 + 3 * rootChips[i]->getNearChip(k).RoadLevel*_roadLevelFlag + rootChips[i]->getNearChip(k).RootNumber)
+						temp[i]->number = j;
+						temp[i]->ang = k;
+						for (int o = 0; o < 4; o++)
 						{
-							rootChips[i]->RootNumber = j;
-							rootChips[i]->RoadAng = k;
-							for (int o = 0; o < 4; o++)
+							if (temp[i]->getNearChip(o).canSetRoad() && !temp[i]->getNearChip(o).flag)
 							{
-								if (rootChips[i]->getNearChip(o).IsRoad &&
-									!rootChips[i]->getNearChip(o).Flag &&
-									(!flag3 || rootChips[i]->getNearChip(o).getJoinedRegion() == _pos1->getJoinedRegion()))
-								{
-									rootChips[c] = &(rootChips[i]->getNearChip(o));
-									c++;
-									numRootChips++;
-								}
+								temp[c] = &(temp[i]->getNearChip(o));
+								temp[c]->flag = true;
+								c++;
 							}
-							for (int o = 0; o < 4; o++) rootChips[i]->getNearChip(o).Flag = true;
-							if (xMin == rootChips[i]->Pos.x) xMin--;
-							if (yMin == rootChips[i]->Pos.y) yMin--;
-							if (xMax == rootChips[i]->Pos.x) xMax++;
-							if (yMax == rootChips[i]->Pos.y) yMax++;
-							rootChips[i] = NULL;
-							break;
 						}
+						break;
 					}
-					else //距離は7
-					{
-						if (j >= 2 + 2 * rootChips[i]->getNearChip(k).RoadLevel*_roadLevelFlag + rootChips[i]->getNearChip(k).RootNumber)
-						{
-							rootChips[i]->RootNumber = j;
-							rootChips[i]->RoadAng = k;
-							for (int o = 0; o < 4; o++)
-							{
-								if (rootChips[i]->getNearChip(o).IsRoad &&
-									!rootChips[i]->getNearChip(o).Flag &&
-									(!flag3 || rootChips[i]->getNearChip(o).getJoinedRegion() == _pos1->getJoinedRegion()))
-								{
-									rootChips[c] = &(rootChips[i]->getNearChip(o));
-									c++;
-									numRootChips++;
-								}
-							}
-							for (int o = 0; o < 4; o++) rootChips[i]->getNearChip(o).Flag = true;
-							if (xMin == rootChips[i]->Pos.x) xMin--;
-							if (yMin == rootChips[i]->Pos.y) yMin--;
-							if (xMax == rootChips[i]->Pos.x) xMax++;
-							if (yMax == rootChips[i]->Pos.y) yMax++;
-							rootChips[i] = NULL;
-							break;
-						}
-					}
-
 				}
 			}
 		}
-		if (_pos1->RootNumber != 0) break;
+		if (getChip(_posA).number != 0) break;
 		j++;
 	}
 	//ルートを登録
-	Chip* now = _pos1;
+	Chip* now = &getChip(_posA);
 	for (;;)
 	{
-		//if(now->IsRoad) 
-		now->RoadLevel = 1;
-		now = &now->getNearChip(now->RoadAng);
+		now->isRoad = true;
+		mapImage[now->THIS.y][now->THIS.x] = RoadColor;
 		if (now == &goal) break;
+		now = &now->getNearChip(now->ang);
 	}
-	_pos2->RoadLevel = 1;
-	for (int x = xMin - 2; x <= xMax + 2; x++)
+	mapTexture = Texture(mapImage);	//Textureに反映
+	//numberとflagの初期化
+	for (auto& t : temp)
 	{
-		for (int y = yMin - 2; y <= yMax + 2; y++)
-		{
-			chips[x][y].RootNumber = 0;
-			chips[x][y].Flag = false;
-		}
+		if (t == NULL) break;
+		t->number = 0;
+		t->flag = false;
+		t = NULL;
 	}
-	/*
-	for (int x = xMin - 2; x <= xMax + 2; x++)
-	{
-		for (int y = yMin - 2; y <= yMax + 2; y++)
-		{
-			if (chips[x][y].RoadLevel != 1 || chips[x][y].getOwnFacility() != NULL) continue;
-			for (int k = 0; k < 8; k++)
-			{
-				bool flag1 = false;
-				bool flag2 = true;
-				int count = 0;
-				for (int i = 0; i < 8; i++)
-				{
-					if (chips[x][y].getNearChip((i + k) % 8, true).RoadLevel == 1)
-					{
-						count++;
-						flag1 = true;
-					}
-					else
-					{
-						if (flag1 == true) { flag2 = false; break; }
-					}
-				}
-				if (count >= 3 && flag2) { chips[x][y].RoadLevel = 3; break; }
-			}
-		}
-	}
-	*/
-	updateMapImage(xMin - 2, yMin - 2, xMax + 2, yMax + 2);
 }
-void	Facility::setRoadToForest()
+void drawPlannedRoadAToB(const Point& _posA, const Point& _posB)
 {
-	//ルート検索プログラム
-	Chip& goal = *getEntranceChip();
-	Chip* pos = NULL;
-	int j = 10;
-	int c = 0;
-	int numRootChips = 0;
-	goal.RootNumber = 1;
-	goal.Flag = true;
-	rootChips[c] = &goal;
+	if (!isConnectedByLand(_posA, _posB)) return;
+	Chip& goal = getChip(_posB);
+	int j = 3, c = 0;
+	goal.number = 1;
+	goal.flag = true;
+	temp[c] = &goal;
 	c++;
-	numRootChips++;
 	for (int i = 0; i < 4; i++)
 	{
-		if (!goal.getNearChip(i).IsRoad) continue;
-		rootChips[c] = &goal.getNearChip(i);
-		c++; numRootChips++;
-		goal.getNearChip(i).Flag = true;
+		if (!goal.getNearChip(i).canSetRoad()) continue;
+		temp[c] = &goal.getNearChip(i);
+		temp[c]->ang = (i + 2) % 4;
+		c++;
+		goal.getNearChip(i).flag = true;
 	}
-	int xMin, yMin, xMax, yMax;
-	xMin = goal.Pos.x - 2;
-	yMin = goal.Pos.y - 2;
-	xMax = goal.Pos.x + 2;
-	yMax = goal.Pos.y + 2;
 
 	for (;;)
 	{
-		for (int i = 0; i < numRootChips; i++)
+		for (int i = 0; i < c; i++)
 		{
-			if (rootChips[i] == NULL) continue;
+			if (temp[i] == NULL) break;
+			if (temp[i]->number != 0) continue;
 			for (int k = 0; k < 4; k++)
 			{
-				if (rootChips[i]->getNearChip(k).RootNumber != 0)
+				if (temp[i]->getNearChip(k).number != 0)
 				{
-					if (rootChips[i]->getNearChip(k).RoadAng == k)	//距離は10
+					if ((temp[i]->getNearChip(k).ang == k && j >= 3 + temp[i]->getNearChip(k).number) ||
+						(temp[i]->getNearChip(k).ang != k && j >= 2 + temp[i]->getNearChip(k).number))
 					{
-						if (j >= 10 * rootChips[i]->getNearChip(k).RoadLevel + rootChips[i]->getNearChip(k).RootNumber)
+						temp[i]->number = j;
+						temp[i]->ang = k;
+						for (int o = 0; o < 4; o++)
 						{
-							rootChips[i]->RootNumber = j;
-							rootChips[i]->RoadAng = k;
-							if (rootChips[i]->BiomeType == Forest) { pos = rootChips[i]; break; }
-							Chip* a = NULL;
-							int o = 0;
-							for (; o < 4; o++)
-								if (rootChips[i]->getNearChip(o).IsRoad && !rootChips[i]->getNearChip(o).Flag) { a = &(rootChips[i]->getNearChip(o)); o++; break; }
-							for (; o < 4; o++)
-								if (rootChips[i]->getNearChip(o).IsRoad && !rootChips[i]->getNearChip(o).Flag) { rootChips[c] = &(rootChips[i]->getNearChip(o)); c++; numRootChips++; }
-							for (o = 0; o < 4; o++) rootChips[i]->getNearChip(o).Flag = true;
-							if (xMin == rootChips[i]->Pos.x) xMin--;
-							if (yMin == rootChips[i]->Pos.y) yMin--;
-							if (xMax == rootChips[i]->Pos.x) xMax++;
-							if (yMax == rootChips[i]->Pos.y) yMax++;
-							rootChips[i] = a;
-							break;
+							if (temp[i]->getNearChip(o).canSetRoad() && !temp[i]->getNearChip(o).flag)
+							{
+								temp[c] = &(temp[i]->getNearChip(o));
+								temp[c]->flag = true;
+								c++;
+							}
 						}
+						break;
 					}
-					else //距離は7
-					{
-						if (j >= 7 * rootChips[i]->getNearChip(k).RoadLevel + rootChips[i]->getNearChip(k).RootNumber)
-						{
-							rootChips[i]->RootNumber = j;
-							rootChips[i]->RoadAng = k;
-							if (rootChips[i]->BiomeType == Forest) { pos = rootChips[i]; break; }
-							Chip* a = NULL;
-							int o = 0;
-							for (; o < 4; o++)
-								if (rootChips[i]->getNearChip(o).IsRoad && !rootChips[i]->getNearChip(o).Flag) { a = &(rootChips[i]->getNearChip(o)); o++; break; }
-							for (o = 0; o < 4; o++)
-								if (rootChips[i]->getNearChip(o).IsRoad && !rootChips[i]->getNearChip(o).Flag) { rootChips[c] = &(rootChips[i]->getNearChip(o)); c++; numRootChips++; }
-							for (o = 0; o < 4; o++) rootChips[i]->getNearChip(o).Flag = true;
-							if (xMin == rootChips[i]->Pos.x) xMin--;
-							if (yMin == rootChips[i]->Pos.y) yMin--;
-							if (xMax == rootChips[i]->Pos.x) xMax++;
-							if (yMax == rootChips[i]->Pos.y) yMax++;
-							rootChips[i] = a;
-							break;
-						}
-					}
-
 				}
 			}
-			if (pos != NULL) break;
 		}
-		if (pos != NULL) break;
+		if (getChip(_posA).number != 0) break;
 		j++;
 	}
-	//ルートを登録
-	Chip* now = pos;
+	//ルートを描画
+	Chip* now = &getChip(_posA);
 	for (;;)
 	{
-		//if(now->IsRoad) 
-		now->RoadLevel = 1;
-		now = &now->getNearChip(now->RoadAng);
+		now->getDrawRect().draw(Color(255, 0, 0, 128));
 		if (now == &goal) break;
+		now = &now->getNearChip(now->ang);
 	}
-	goal.RoadLevel = 1;
-	for (int x = xMin - 2; x <= xMax + 2; x++)
+	//numberとflagの初期化
+	for (auto& t : temp)
 	{
-		for (int y = yMin - 2; y <= yMax + 2; y++)
-		{
-			chips[x][y].RootNumber = 0;
-			chips[x][y].Flag = false;
-		}
+		if (t == NULL) break;
+		t->number = 0;
+		t->flag = false;
+		t = NULL;
 	}
-
-	for (int x = xMin - 2; x <= xMax + 2; x++)
+}
+Chip& getChip(const Point& _pos) { return chips[_pos.x][_pos.y]; }
+Chip& getChip(const int& _x, const int& _y) { return chips[_x][_y]; }
+Chip&	Chip::getNearChip(const int& _r)
+{
+	switch (_r % 4)
 	{
-		for (int y = yMin - 2; y <= yMax + 2; y++)
-		{
-			if (chips[x][y].RoadLevel != 1 || chips[x][y].getOwnFacility() != NULL) continue;
-			for (int k = 0; k < 8; k++)
-			{
-				bool flag1 = false;
-				bool flag2 = true;
-				int count = 0;
-				for (int i = 0; i < 8; i++)
-				{
-					if (chips[x][y].getNearChip((i + k) % 8, true).RoadLevel == 1)
-					{
-						count++;
-						flag1 = true;
-					}
-					else
-					{
-						if (flag1 == true) { flag2 = false; break; }
-					}
-				}
-				if (count >= 3 && flag2) { chips[x][y].RoadLevel = 3; break; }
-			}
-		}
+	case 0: return getChip(THIS.movedBy(-1, 0));
+	case 1: return getChip(THIS.movedBy(0, -1));
+	case 2: return getChip(THIS.movedBy(1, 0));
+	case 3: return getChip(THIS.movedBy(0, 1));
 	}
-	updateMapImage(xMin - 2, yMin - 2, xMax + 2, yMax + 2);
-}
-void updateMapImage(const int& xMin, const int& yMin, const int& xMax, const int& yMax)
-{
-	for (int x = xMin; x < xMax; x++)
-	{
-		for (int y = yMin; y < yMax; y++)
-		{
-			if (chips[x][y].RoadLevel == 1)
-			{
-				mapImage[y][x] = Palette::Khaki;
-			}
-			else
-			{
-				if (chips[x][y].getOwnFacility() != NULL)
-				{
-					switch (chips[x][y].getOwnFacility()->Type)
-					{
-					case Market: mapImage[y][x] = Color(200, 200, 0); break;
-					case House: mapImage[y][x] = Color(72, 159, 72); break;
-					case TreeHouse: mapImage[y][x] = Color(168, 60, 60); break;
-					case CarpentersHut: mapImage[y][x] = Color(0, 132, 151); break;
-					case Farm: mapImage[y][x] = Color(L"#503830"); break;
-					}
-				}
-				else
-				{
-					switch (chips[x][y].BiomeType)
-					{
-					case Ocean:
-						mapImage[y][x] = Palette::Blue;
-						break;
-					case Plains:
-						mapImage[y][x] = Palette::Green;
-						break;
-					case Desert:
-						mapImage[y][x] = Palette::Yellow;
-						break;
-					case Forest:
-						mapImage[y][x] = Palette::Darkgreen;
-						break;
-					case Mountain:
-						mapImage[y][x] = Palette::Gray;
-						break;
-					}
-				}
-			}
-		}
-	}
-	mapTexture = Texture(mapImage);
-}
-
-Facility* Chip::getOwnFacility() const
-{
-	if (OwnFacilityP == NULL) return NULL;
-	else return &facilities[OwnFacilityP - 1];
-}
-void	Chip::setOwnFacility(const Facility* _f)
-{
-	if (_f == NULL) OwnFacilityP = NULL;
-	else OwnFacilityP = _f->THIS + 1;
-}
-Zone*	Chip::getJoinedZone() const
-{
-	if (JoinedZoneP == NULL) return NULL;
-	else return &zones[JoinedZoneP - 1];
-}
-void	Chip::setJoinedZone(const Zone* _z)
-{
-	if (_z == NULL) JoinedZoneP = NULL;
-	else JoinedZoneP = _z->THIS + 1;
-}
-Region* Chip::getJoinedRegion() const
-{
-	if (JoinedRegionP == NULL) return NULL;
-	else return &regions[JoinedRegionP - 1];
-}
-void	Chip::setJoinedRegion(const Region* _r)
-{
-	if (_r == NULL) JoinedRegionP = NULL;
-	else JoinedRegionP = _r->THIS + 1;
+	return chips[0][0];
 }
