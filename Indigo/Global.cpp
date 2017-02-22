@@ -1,6 +1,7 @@
 #include"Basic.h"
 
 Texture mapTexture;
+Array<PlaceData> placeData;
 PerlinNoise noi(Random(2048));
 void drawAll()
 {
@@ -25,14 +26,16 @@ void drawAll()
 			}
 		}
 
+		//placesFrame‚Ì•`‰æ
+		for (auto& p : places) p.drawFrame();
 
 		//road‚Ì•`‰æ
 		for (int x = xMin; x < xMax; x++)
 			for (int y = yMin; y < yMax; y++)
-				chips[x][y].drawRoadFrame();
+				chips[x][y].drawRoad(Palette::Black, 44);
 		for (int x = xMin; x < xMax; x++)
 			for (int y = yMin; y < yMax; y++)
-				chips[x][y].drawRoad();
+				chips[x][y].drawRoad(RoadColor, 36);
 
 
 	}
@@ -40,8 +43,6 @@ void drawAll()
 	{
 		mapTexture.resize(chipX * ChipImageSize, chipY*ChipImageSize).draw();
 	}
-	//places‚Ì•`‰æ
-	for (auto& p : places) p.drawFloor();
 
 	//place‚Ì–¼‘O‚Ì•`‰æ
 	for (auto& p : places) p.drawName();
@@ -56,7 +57,7 @@ void drawAll()
 	if (settingRoadMode && previousSelectedChip != NULL && nowSelectedChip != NULL) drawPlannedRoadAToB(previousSelectedChip->THIS, nowSelectedChip->THIS);
 
 	//PlannedPlace‚Ì•`‰æ
-	if (makingHouseMode) { makingHouseP.drawFloor(1); makingHouseP.drawName(); }
+	if (makingHouseMode) { makingHouseP.drawFrame(1); makingHouseP.drawName(1); }
 
 	//nowSelectedChip & selectedPlace‚Ìİ’è
 	Mouse::ClearTransform();
@@ -68,6 +69,10 @@ void drawAll()
 }
 void InitAll()
 {
+	placeData.clear();
+	CSVReader reader(L"Data/PlaceData.csv");
+	for (int i = 0; i < reader.rows; i++) placeData.push_back(i);
+
 	for (auto& t : temp) t = NULL;
 
 	PerlinNoise noise(Random(2048));

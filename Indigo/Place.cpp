@@ -10,7 +10,7 @@ void	Place::reset()
 	pos = Point(0, 0);
 	r = 0;
 }
-void	Place::drawFloor(const int& _type) const
+void	Place::drawFrame(const int& _type) const
 {
 	const int frameWidth = 4;
 
@@ -18,9 +18,9 @@ void	Place::drawFloor(const int& _type) const
 	const Rect drawRect = getDrawRect();
 	if (_type == 1)	//建設計画時
 	{
-		drawRect.draw(Color(255, 0, 0, 128)).drawFrame(frameWidth, 0, Palette::Black);	//本体は赤い感じで
+		drawRect.drawFrame(frameWidth, 0, Palette::Black);	//本体は赤い感じで
 	}
-	else drawRect.draw(getDrawColor()).drawFrame(frameWidth, 0, Palette::Black);
+	else drawRect.drawFrame(frameWidth, 0, Palette::Black);
 
 	const int inlineRoadWidth = 36;
 	switch (r)
@@ -40,9 +40,13 @@ void	Place::drawFloor(const int& _type) const
 	}
 }
 
-void	Place::drawName() const
+void	Place::drawName(const int& _type) const
 {
+	const int frameWidth = 4;
 	if (!enabled) return;
+	Rect drawRect((pos*ChipImageSize).movedBy(frameWidth, frameWidth), (getSize()*ChipImageSize).movedBy(-frameWidth * 2, -frameWidth * 2));
+	if (_type == 1) drawRect.draw(Color(255, 0, 0, 128));
+	else drawRect.draw(getDrawColor());
 	FontAsset(L"drawPlaceNameFont").drawCenter(getNameAsString(), (pos + Vec2(getSize()) / 2)*ChipImageSize);
 }
 
@@ -96,62 +100,25 @@ bool setPlace(const int& _r, const Point& _pos, const PType& _t)
 }
 Point	Place::getSize() const
 {
-	switch (type)
-	{
-	case House:
-		if (r == 0 || r == 2) return Point(2, 3);
-		else return Point(3, 2);
-		break;
-	case Market:
-		if (r == 0 || r == 2) return Point(4, 4);
-		else return Point(4, 4);
-		break;
-	case Farm:
-		if (r == 0 || r == 2) return Point(5, 5);
-		else return Point(5, 5);
-		break;
-	default:
-		break;
-	}
-	return Point(0, 0);
+	if (r % 2 == 1) return Point(placeData[type].size.y, placeData[type].size.x);
+	else return placeData[type].size;
 }
 Color	Place::getDrawColor() const
 {
-	switch (type)
-	{
-	case House:	return Color(64, 255, 64);
-	case Market:return Color(255, 255, 0);
-	case Farm:	return Color(0, 0, 128);
-	default:	return Color(0);
-	}
+	return placeData[type].color;
 }
 String	Place::getNameAsString() const
 {
-	switch (type)
-	{
-	case House:	return  L"長屋";
-	case Market:return  L"問屋";
-	case Farm:	return  L"水田";
-	default:	return  L"No Name";
-	}
+	return placeData[type].name;
 }
 Point	Place::getEntrancePos() const
 {
-	//r==0の時に、EntrancePosが0方向になるようにする
-	int entranceY;	//r==0の場合のEntrancePosのy座標
-	switch (type)
-	{
-	case House:	entranceY = 1; break;
-	case Market:entranceY = 1; break;
-	case Farm:	entranceY = 2; break;
-	default:	entranceY = 0; break;
-	}
 	switch (r)
 	{
-	case 0: return pos.movedBy(0, entranceY);
-	case 1: return pos.movedBy(getSize().x - 1 - entranceY, 0);
-	case 2: return pos.movedBy(getSize().x - 1, getSize().y - 1 - entranceY);
-	case 3: return pos.movedBy(entranceY, getSize().y - 1);
+	case 0: return pos.movedBy(0, placeData[type].entraceY);
+	case 1: return pos.movedBy(getSize().x - 1 - placeData[type].entraceY, 0);
+	case 2: return pos.movedBy(getSize().x - 1, getSize().y - 1 - placeData[type].entraceY);
+	case 3: return pos.movedBy(placeData[type].entraceY, getSize().y - 1);
 	}
 	return pos;
 }

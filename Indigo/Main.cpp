@@ -7,7 +7,7 @@
 void Main()
 {
 	//Window設定
-	Window::SetTitle(L"Phlox");
+	Window::SetTitle(L"Platanus");
 	Window::SetStyle(WindowStyle::Sizeable);
 	Window::SetFullscreen(false, Size(1280, 720));
 	Window::Maximize();
@@ -60,6 +60,7 @@ void Main()
 	Camera2D camera(Vec2(chipX, chipY) / 2 * ChipImageSize, 0.1);
 
 	Font font(24);
+	Graphics::SetBackground(Palette::Blue);
 
 	while (System::Update())
 	{
@@ -79,6 +80,6 @@ void Main()
 
 		UpdateInterface();
 
-		font.draw(L"Phlox");
+		font.draw(L"Platanus");
 	}
 }

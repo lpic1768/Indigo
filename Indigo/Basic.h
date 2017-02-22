@@ -35,6 +35,23 @@ extern double sec;
 //Interface
 void UpdateInterface();	//drawも兼ねる
 
+struct PlaceData
+{
+	PlaceData(const int& _type)
+	{
+		CSVReader reader(L"Data/PlaceData.csv");
+		name = reader.getOr<String>(_type, 1, String());
+		size = reader.getOr<Point>(_type, 2, Point(0, 0));
+		entraceY = reader.getOr<int>(_type, 3, 0);
+		color = reader.getOr<Color>(_type, 4, Color(0,0,0,255));
+	}
+	String	name;
+	Point	size;
+	int		entraceY;
+	Color	color;
+};
+extern Array<PlaceData> placeData;
+
 #define PlaceMax 10000
 extern Place places[PlaceMax];
 enum PType
@@ -53,8 +70,8 @@ public:
 	Point	Place::getSize() const;
 	Point	Place::getEntrancePos() const;
 	Rect	Place::getDrawRect() const { return Rect(pos*ChipImageSize, getSize()*ChipImageSize); }
-	void	Place::drawFloor(const int& _type = 0) const;	//もし、_type==1ならば赤表示
-	void	Place::drawName() const;
+	void	Place::drawFrame(const int& _type = 0) const;	//もし、_type==1ならば赤表示
+	void	Place::drawName(const int& _type = 0) const;
 	void	Place::reset();
 	void	Place::set(const int& _r, const Point& _pos, const PType& _t);
 
@@ -100,8 +117,7 @@ class Chip : public PlacePointer
 public:
 	void	Chip::reset();
 	void	Chip::drawGround();
-	void	Chip::drawRoad();
-	void	Chip::drawRoadFrame();
+	void	Chip::drawRoad(const Color& _color, const double& _width);
 	Chip&	Chip::getNearChip(const int& _r);
 	Rect	Chip::getDrawRect() const { return Rect(THIS*ChipImageSize, Point(ChipImageSize, ChipImageSize)); }
 	bool	Chip::canSetRoad() const { return isLand && getPlace() == NULL; }
@@ -131,6 +147,7 @@ class Unit
 public:
 	void reset();
 
+	String	message;
 	Items	items;
 	int		timerNow;	//汎用タイマ
 	int		timerMax;	//汎用タイマ
