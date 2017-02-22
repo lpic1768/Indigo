@@ -26,6 +26,49 @@ void	Chip::drawGround()
 	else if (isLand) drawRect.draw(Palette::Green);
 	else drawRect.draw(Palette::Blue);
 }
+void	Chip::drawRoadFrame()
+{
+	const double width = 44;
+	if (!isRoad) return;
+	for (int i = 0; i < 2; i++) if (getNearChip(i).isRoad) Circle((THIS + getNearChip(i).THIS).movedBy(1, 1) / 2.0 * ChipImageSize, width / 2.0).draw(Palette::Black);
+	for (int i = 0; i < 4; i++)
+	{
+		if (getNearChip(i).isRoad)
+		{
+			for (int j = i + 1; j < 4; j++)
+			{
+				if (getNearChip(j).isRoad)
+				{
+					const Vec2 direction = Vec2(getNearChip(j).THIS - getNearChip(i).THIS).normalized()*width / 2.0;
+					Line(Vec2((THIS + getNearChip(i).THIS).movedBy(1, 1) * ChipImageSize / 2.0) + direction,
+						Vec2((THIS + getNearChip(j).THIS).movedBy(1, 1) * ChipImageSize / 2.0) - direction).draw(width, Palette::Black);
+				}
+			}
+		}
+	}
+}
+void Chip::drawRoad()
+{
+
+	const double width = 36;
+	if (!isRoad) return;
+	for (int i = 0; i < 2; i++) if (getNearChip(i).isRoad) Circle((THIS + getNearChip(i).THIS).movedBy(1, 1) / 2.0 * ChipImageSize, width / 2.0).draw(RoadColor);
+	for (int i = 0; i < 4; i++)
+	{
+		if (getNearChip(i).isRoad)
+		{
+			for (int j = i + 1; j < 4; j++)
+			{
+				if (getNearChip(j).isRoad)
+				{
+					const Vec2 direction = Vec2(getNearChip(j).THIS - getNearChip(i).THIS).normalized()*width / 2.0;
+					Line(Vec2((THIS + getNearChip(i).THIS).movedBy(1, 1) * ChipImageSize / 2.0) + direction,
+						Vec2((THIS + getNearChip(j).THIS).movedBy(1, 1) * ChipImageSize / 2.0) - direction).draw(width, RoadColor);
+				}
+			}
+		}
+	}
+}
 void resetTemp()
 {
 	for (auto& t : temp)

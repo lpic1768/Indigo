@@ -18,10 +18,26 @@ void	Place::drawFloor(const int& _type) const
 	const Rect drawRect = getDrawRect();
 	if (_type == 1)	//åöê›åvâÊéû
 	{
-		getChip(getEntrancePos()).getDrawRect().draw(RoadColor);	//ì¸å˚ÇÃìπòHï`âÊ
 		drawRect.draw(Color(255, 0, 0, 128)).drawFrame(frameWidth, 0, Palette::Black);	//ñ{ëÃÇÕê‘Ç¢ä¥Ç∂Ç≈
 	}
 	else drawRect.draw(getDrawColor()).drawFrame(frameWidth, 0, Palette::Black);
+
+	const int inlineRoadWidth = 36;
+	switch (r)
+	{
+	case 0:
+		Rect(Point(getChip(getEntrancePos()).THIS*ChipImageSize).movedBy(0, 14), frameWidth, inlineRoadWidth).draw(RoadColor);
+		break;
+	case 1:
+		Rect(Point(getChip(getEntrancePos()).THIS*ChipImageSize).movedBy(14, 0), inlineRoadWidth, frameWidth).draw(RoadColor);
+		break;
+	case 2:
+		Rect(Point(getChip(getEntrancePos()).THIS*ChipImageSize).movedBy(ChipImageSize - frameWidth, 14), frameWidth, inlineRoadWidth).draw(RoadColor);
+		break;
+	case 3:
+		Rect(Point(getChip(getEntrancePos()).THIS*ChipImageSize).movedBy(14, ChipImageSize - frameWidth), inlineRoadWidth, frameWidth).draw(RoadColor);
+		break;
+	}
 }
 
 void	Place::drawName() const

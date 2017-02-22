@@ -11,6 +11,7 @@ class PlacePointer;
 #define PlainsColor Palette::Green
 #define OceanColor Palette::Blue
 #define ChipImageSize	64	//チップ画像の大きさ
+#define RoadWidth		45.2
 #define ChipXMax 2048	//チップの保証する最大値
 #define ChipYMax 2048	//チップの保証する最大値
 
@@ -18,6 +19,7 @@ class PlacePointer;
 void drawAll();
 void InitAll();
 bool SetVillage(const Point& _pos);
+extern bool setupByPOMS();
 extern bool destroyPlaceMode;
 extern bool destroyRoadMode;
 extern bool makingHouseMode;
@@ -97,7 +99,9 @@ class Chip : public PlacePointer
 {
 public:
 	void	Chip::reset();
-	void	Chip::drawGround();	//地面の描画
+	void	Chip::drawGround();
+	void	Chip::drawRoad();
+	void	Chip::drawRoadFrame();
 	Chip&	Chip::getNearChip(const int& _r);
 	Rect	Chip::getDrawRect() const { return Rect(THIS*ChipImageSize, Point(ChipImageSize, ChipImageSize)); }
 	bool	Chip::canSetRoad() const { return isLand && getPlace() == NULL; }
