@@ -70,7 +70,6 @@ void	Place::set(const int& _r, const Point& _pos, const PType& _t)
 			getChip(x, y).setPlace(this);
 	getChip(getEntrancePos()).isRoad = true;
 }
-
 bool canSetPlace(const int& _r, const Point& _pos, const PType& _t)
 {
 	Place p;	//‰¼‘z

@@ -5,7 +5,7 @@
 class Chip;
 class Unit;
 class Place;
-class PlacePointer;
+class PPointer;
 
 #define RoadColor Palette::Khaki
 #define PlainsColor Palette::Green
@@ -16,6 +16,7 @@ class PlacePointer;
 #define ChipYMax 2048	//チップの保証する最大値
 
 //グローバル関数
+void updateAll();
 void drawAll();
 void InitAll();
 bool SetVillage(const Point& _pos);
@@ -24,6 +25,8 @@ extern bool destroyPlaceMode;
 extern bool destroyRoadMode;
 extern bool makingHouseMode;
 extern bool settingRoadMode;
+extern bool unitFallDownMode;
+extern Vec2 mousePosAsGlobalVec2;
 extern Place makingHouseP;
 extern Chip* previousSelectedChip;
 extern bool mouseOverInterface;
@@ -89,7 +92,7 @@ bool setPlace(const int& _r, const Point& _pos, const PType& _t);
 extern Place* selectedPlace;
 bool canSetPlace(const int& _r, const Point& _pos, const PType& _t);
 
-class PlacePointer
+class PPointer
 {
 public:
 	Place* getPlace() const
@@ -112,7 +115,7 @@ extern int chipX;
 extern int chipY;
 extern Chip* nowSelectedChip;
 extern Chip* newnowSelectedChip;
-class Chip : public PlacePointer
+class Chip : public PPointer
 {
 public:
 	void	Chip::reset();
@@ -121,7 +124,7 @@ public:
 	Chip&	Chip::getNearChip(const int& _r);
 	Rect	Chip::getDrawRect() const { return Rect(THIS*ChipImageSize, Point(ChipImageSize, ChipImageSize)); }
 	bool	Chip::canSetRoad() const { return isLand && getPlace() == NULL; }
-
+	Vec2	Chip::getGlobalPos() const { return Vec2(THIS*ChipImageSize).movedBy(ChipImageSize / 2, ChipImageSize / 2); }
 public:
 	bool	Chip::isRoad;
 	bool	Chip::isLand;
@@ -141,19 +144,36 @@ void setRoadAToB(const Point& _posA, const Point& _posB);
 void drawPlannedRoadAToB(const Point& _posA, const Point& _posB);
 void resetTemp();
 
-#define UNIT_MAX 10000
+#define UnitMax 10000
+#define UnitRootMax 100
 class Unit
 {
 public:
-	void reset();
+	void	Unit::reset();
+	bool	Unit::set(const Vec2& _globalPos);
+	void	Unit::drawBody() const;
+	void	Unit::update(const int& _actionPoint);
+	bool	Unit::searchAndSetHome();
+	bool	Unit::goTo(const Point& _pos);
+public:
+	Point	Unit::tarPos;
+	PPointer Unit::home;
+	int		Unit::rootNow;
+	int		Unit::rootMax;
+	double	Unit::rootTimer[UnitRootMax];
+	Vec2	Unit::rootAng[UnitRootMax];
+	bool	Unit::enabled;
+	String	Unit::message;
+	Items	Unit::items;
+	bool	Unit::isInPlace;
+	bool	Unit::isMoving;
+	double	Unit::movingSpeed;
+	Vec2	Unit::movingAng;
+	int		Unit::timerNow;	//汎用タイマ
+	int		Unit::timerMax;	//汎用タイマ
+	Point	Unit::pos;		//内部座標	Chipに基づく
+	Vec2	Unit::addPos;		//追加座標。建物内部や、移動中を表す
 
-	String	message;
-	Items	items;
-	int		timerNow;	//汎用タイマ
-	int		timerMax;	//汎用タイマ
-	Point	pos;		//内部座標	Chipに基づく
-	Vec2	addPos;		//追加座標。建物内部や、移動中を表す
-
-	int		THIS;
+	int		Unit::THIS;
 };
-extern Unit units[UNIT_MAX];
+extern Unit units[UnitMax];

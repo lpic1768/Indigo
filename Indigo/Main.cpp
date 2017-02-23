@@ -21,26 +21,7 @@ void Main()
 	TextureAsset::Register(L"farm", L"Assets/Farm.png");
 
 	//ボタンアセット
-	TextureAsset::Register(L"b1", L"Assets/b01.png");
-	TextureAsset::Register(L"b2", L"Assets/b02.png");
-	TextureAsset::Register(L"b3", L"Assets/b03.png");
-	TextureAsset::Register(L"b4", L"Assets/b04.png");
-	TextureAsset::Register(L"b5", L"Assets/b05.png");
-	TextureAsset::Register(L"b6", L"Assets/b06.png");
-	TextureAsset::Register(L"b7", L"Assets/b07.png");
-	TextureAsset::Register(L"b8", L"Assets/b08.png");
-	TextureAsset::Register(L"b9", L"Assets/b09.png");
-	TextureAsset::Register(L"b10", L"Assets/b10.png");
-	TextureAsset::Register(L"b11", L"Assets/b11.png");
-	TextureAsset::Register(L"b12", L"Assets/b12.png");
-	TextureAsset::Register(L"b13", L"Assets/b13.png");
-	TextureAsset::Register(L"b14", L"Assets/b14.png");
-	TextureAsset::Register(L"b15", L"Assets/b15.png");
-	TextureAsset::Register(L"b16", L"Assets/b16.png");
-	TextureAsset::Register(L"b17", L"Assets/b17.png");
-	TextureAsset::Register(L"b18", L"Assets/b18.png");
-	TextureAsset::Register(L"b19", L"Assets/b19.png");
-	TextureAsset::Register(L"b20", L"Assets/b20.png");
+	for (int i = 1; i <= 22; i++) TextureAsset::Register(Format(L"b", i), Format(L"Assets/b", i, L".png"));
 
 
 	SoundAsset::Register(L"music1", L"Assets/Touch_Next.mp3");
@@ -56,11 +37,12 @@ void Main()
 	SoundAsset::Register(L"10", L"Assets/10.mp3");
 	SoundAsset::Register(L"11", L"Assets/11.mp3");
 
+	Graphics::SetBackground(Palette::Blue);
+
 	InitAll();
 	Camera2D camera(Vec2(chipX, chipY) / 2 * ChipImageSize, 0.1);
 
 	Font font(24);
-	Graphics::SetBackground(Palette::Blue);
 
 	while (System::Update())
 	{
@@ -72,6 +54,7 @@ void Main()
 		{
 			const auto t1 = camera.createTransformer();
 
+			updateAll();
 
 			drawAll();
 

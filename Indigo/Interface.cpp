@@ -6,6 +6,7 @@ bool makingVillageMode = false;
 bool makingHouseMode = false;
 bool settingRoadMode = false;
 bool mouseOverInterface = false;
+bool unitFallDownMode = false;
 Chip* previousSelectedChip = NULL;
 Place makingHouseP;
 
@@ -16,6 +17,7 @@ void closeAllInterface()
 	makingVillageMode = false;
 	makingHouseMode = false;
 	settingRoadMode = false;
+	unitFallDownMode = false;
 }
 
 bool setButton(const int& _imageNumber, const Point _pos, bool& _flag, const Size _size = Point(64, 64))
@@ -33,6 +35,14 @@ bool setButton(const int& _imageNumber, const Point _pos, bool& _flag, const Siz
 		}
 	}
 	return false;
+}
+void unitFallDown()
+{
+	if (nowSelectedChip == NULL) return;
+	if (Input::MouseL.clicked && nowSelectedChip->isLand && (nowSelectedChip->isRoad || nowSelectedChip->getPlace() != NULL))
+	{
+		for (auto& u : units) if (u.set(mousePosAsGlobalVec2)) { SoundAsset(L"3").playMulti(); break; }
+	}
 }
 void makeVillage()
 {
@@ -134,6 +144,7 @@ void UpdateInterface()
 	if (setButton(7, Point(144, Window::Size().y - 80), makingHouseMode))	SoundAsset(L"11").playMulti();
 	if (setButton(15, Point(208, Window::Size().y - 80), settingRoadMode))	SoundAsset(L"11").playMulti();
 	if (setButton(17, Point(272, Window::Size().y - 80), destroyRoadMode))	SoundAsset(L"11").playMulti();
+	if (setButton(21, Point(336, Window::Size().y - 80), unitFallDownMode))	SoundAsset(L"11").playMulti();
 
 	if (!mouseOverInterface)
 	{
@@ -142,5 +153,6 @@ void UpdateInterface()
 		if (settingRoadMode) setRoad();
 		if (destroyPlaceMode) destroyPlace();
 		if (destroyRoadMode) destroyRoad();
+		if (unitFallDownMode) unitFallDown();
 	}
 }

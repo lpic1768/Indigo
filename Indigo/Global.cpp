@@ -3,6 +3,12 @@
 Texture mapTexture;
 Array<PlaceData> placeData;
 PerlinNoise noi(Random(2048));
+Vec2 mousePosAsGlobalVec2;
+void updateAll()
+{
+	//unit‚Ìupdate
+	for (auto& u : units) u.update(1);
+}
 void drawAll()
 {
 	Vec2 p1 = Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) / Graphics2D::GetTransform()._11;
@@ -44,8 +50,12 @@ void drawAll()
 		mapTexture.resize(chipX * ChipImageSize, chipY*ChipImageSize).draw();
 	}
 
+
 	//place‚Ì–¼‘O‚Ì•`‰æ
 	for (auto& p : places) p.drawName();
+
+	//unit‚Ì•`‰æ
+	for (auto& u : units) u.drawBody();
 
 	//destroyRoadRenge‚Ì•`‰æ
 	if (destroyRoadMode && nowSelectedChip != NULL && previousSelectedChip != NULL) Rect(previousSelectedChip->THIS*ChipImageSize, (nowSelectedChip->THIS - previousSelectedChip->THIS)*ChipImageSize).draw(Color(255, 0, 0, 128));
@@ -59,10 +69,13 @@ void drawAll()
 	//PlannedPlace‚Ì•`‰æ
 	if (makingHouseMode) { makingHouseP.drawFrame(1); makingHouseP.drawName(1); }
 
+	//unitFallDown‚Ì•`‰æ
+	if (unitFallDownMode){nowSelectedChip->getDrawRect().draw(Color(255, 255, 0, 128));}
+
 	//nowSelectedChip & selectedPlace‚ÌÝ’è
 	Mouse::ClearTransform();
-	const Vec2 mousePosAsChipVec2((Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) + Mouse::Pos()) / Graphics2D::GetTransform()._11 / ChipImageSize);
-	const Point mousePosAsChipPoint(mousePosAsChipVec2.x, mousePosAsChipVec2.y);
+	mousePosAsGlobalVec2 = Vec2((Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) + Mouse::Pos()) / Graphics2D::GetTransform()._11 );
+	const Point mousePosAsChipPoint(mousePosAsGlobalVec2.x / ChipImageSize, mousePosAsGlobalVec2.y / ChipImageSize);
 	if (mousePosAsChipPoint.x >= 0 && mousePosAsChipPoint.y >= 0 && mousePosAsChipPoint.x < chipX && mousePosAsChipPoint.y < chipY) nowSelectedChip = &getChip(mousePosAsChipPoint);
 	if (nowSelectedChip != NULL) selectedPlace = nowSelectedChip->getPlace();
 	else selectedPlace = NULL;
@@ -80,6 +93,7 @@ void InitAll()
 	for (auto& p : places) p.reset();
 	for (int i = 0; i < PlaceMax; i++) places[i].THIS = i;
 	for (auto& u : units) u.reset();
+	for (int i = 0; i < UnitMax; i++) units[i].THIS = i;
 
 	for (int x = 0; x < chipX; x++)
 	{
