@@ -4,6 +4,7 @@ Texture mapTexture;
 Array<PlaceData> placeData;
 PerlinNoise noi(Random(2048));
 Vec2 mousePosAsGlobalVec2;
+Unit* selectedUnit = NULL;
 void updateAll()
 {
 	//unit‚Ìupdate
@@ -57,28 +58,61 @@ void drawAll()
 	//unit‚Ì•`‰æ
 	for (auto& u : units) u.drawBody();
 
-	//destroyRoadRenge‚Ì•`‰æ
-	if (destroyRoadMode && nowSelectedChip != NULL && previousSelectedChip != NULL) Rect(previousSelectedChip->THIS*ChipImageSize, (nowSelectedChip->THIS - previousSelectedChip->THIS)*ChipImageSize).draw(Color(255, 0, 0, 128));
-
-	//destroyPlace‚Ì•`‰æ
-	if (destroyPlaceMode && selectedPlace != NULL) Rect(selectedPlace->pos*ChipImageSize, selectedPlace->getSize()*ChipImageSize).draw(Color(255, 0, 0, 128));
-
-	//PlannedRoad‚Ì•`‰æ
-	if (settingRoadMode && previousSelectedChip != NULL && nowSelectedChip != NULL) drawPlannedRoadAToB(previousSelectedChip->THIS, nowSelectedChip->THIS);
-
-	//PlannedPlace‚Ì•`‰æ
-	if (makingHouseMode) { makingHouseP.drawFrame(1); makingHouseP.drawName(1); }
-
-	//unitFallDown‚Ì•`‰æ
-	if (unitFallDownMode){nowSelectedChip->getDrawRect().draw(Color(255, 255, 0, 128));}
+	switch (iMode)
+	{
+	case None:
+		break;
+	case DestroyPlaceMode:
+		if (selectedPlace != NULL) Rect(selectedPlace->pos*ChipImageSize, selectedPlace->getSize()*ChipImageSize).draw(Color(255, 0, 0, 128));
+		break;
+	case DestroyRoadMode:
+		if (nowSelectedChip != NULL && previousSelectedChip != NULL) Rect(previousSelectedChip->THIS*ChipImageSize, (nowSelectedChip->THIS - previousSelectedChip->THIS)*ChipImageSize).draw(Color(255, 0, 0, 128));
+		break;
+	case MakingVillageMode:
+		break;
+	case MakingHouseMode:
+		makingHouseP.drawFrame(1); makingHouseP.drawName(1);
+		break;
+	case SettingRoadMode:
+		if (previousSelectedChip != NULL && nowSelectedChip != NULL)
+		{
+			Point a = previousSelectedChip->THIS;
+			Point b = nowSelectedChip->THIS;
+			if (getChip(a).getPlace() != NULL) a = getChip(a).getPlace()->getEntrancePos();
+			if (getChip(b).getPlace() != NULL) b = getChip(b).getPlace()->getEntrancePos();
+			drawPlannedRoadAToB(a, b);
+		}
+		break;
+	case UnitFallDownMode:
+		nowSelectedChip->getDrawRect().draw(Color(255, 255, 0, 128));
+		break;
+	default:
+		break;
+	}
 
 	//nowSelectedChip & selectedPlace‚ÌÝ’è
 	Mouse::ClearTransform();
-	mousePosAsGlobalVec2 = Vec2((Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) + Mouse::Pos()) / Graphics2D::GetTransform()._11 );
+	mousePosAsGlobalVec2 = Vec2((Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) + Mouse::Pos()) / Graphics2D::GetTransform()._11);
 	const Point mousePosAsChipPoint(mousePosAsGlobalVec2.x / ChipImageSize, mousePosAsGlobalVec2.y / ChipImageSize);
 	if (mousePosAsChipPoint.x >= 0 && mousePosAsChipPoint.y >= 0 && mousePosAsChipPoint.x < chipX && mousePosAsChipPoint.y < chipY) nowSelectedChip = &getChip(mousePosAsChipPoint);
 	if (nowSelectedChip != NULL) selectedPlace = nowSelectedChip->getPlace();
 	else selectedPlace = NULL;
+	if (Input::MouseL.released && selectedUnit != NULL && nowSelectedChip != NULL && nowSelectedChip->getPlace() != NULL)
+	{
+		if (nowSelectedChip->getPlace()->getCapacityMax() - nowSelectedChip->getPlace()->capacity > 0)
+		{
+			if (nowSelectedChip->getPlace()->type == House) selectedUnit->home.setPlace(nowSelectedChip->getPlace());
+			else selectedUnit->workplace.setPlace(nowSelectedChip->getPlace());
+			nowSelectedChip->getPlace()->capacity++;
+			SoundAsset(L"9").playMulti();
+		}
+	}
+	if (!Input::MouseL.pressed)
+	{
+		selectedUnit = NULL;
+		if (iMode == None) for (auto& u : units) if (u.enabled && mousePosAsGlobalVec2.distanceFrom(u.getRealPos()) < 10.0) { selectedUnit = &u; break; }
+	}
+	else if (selectedUnit != NULL) Line(selectedUnit->getRealPos(), mousePosAsGlobalVec2).draw(4, Palette::Red);
 }
 void InitAll()
 {

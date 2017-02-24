@@ -21,14 +21,21 @@ void drawAll();
 void InitAll();
 bool SetVillage(const Point& _pos);
 extern bool setupByPOMS();
-extern bool destroyPlaceMode;
-extern bool destroyRoadMode;
-extern bool makingHouseMode;
-extern bool settingRoadMode;
-extern bool unitFallDownMode;
+enum IMode
+{
+	None,
+	DestroyPlaceMode,
+	DestroyRoadMode,
+	MakingVillageMode,
+	MakingHouseMode,
+	SettingRoadMode,
+	UnitFallDownMode,
+};
+extern IMode iMode;
 extern Vec2 mousePosAsGlobalVec2;
 extern Place makingHouseP;
 extern Chip* previousSelectedChip;
+extern Unit* selectedUnit;
 extern bool mouseOverInterface;
 extern Texture mapTexture;
 
@@ -46,12 +53,14 @@ struct PlaceData
 		name = reader.getOr<String>(_type, 1, String());
 		size = reader.getOr<Point>(_type, 2, Point(0, 0));
 		entraceY = reader.getOr<int>(_type, 3, 0);
-		color = reader.getOr<Color>(_type, 4, Color(0,0,0,255));
+		color = reader.getOr<Color>(_type, 4, Color(0, 0, 0, 255));
+		capacityMax = reader.getOr<int>(_type, 5, 0);
 	}
 	String	name;
 	Point	size;
 	int		entraceY;
 	Color	color;
+	int		capacityMax;
 };
 extern Array<PlaceData> placeData;
 
@@ -77,9 +86,10 @@ public:
 	void	Place::drawName(const int& _type = 0) const;
 	void	Place::reset();
 	void	Place::set(const int& _r, const Point& _pos, const PType& _t);
-
+	int		Place::getCapacityMax() const;
 public:
 
+	int		Place::capacity;
 	int		Place::r;		//Œü‚«
 	bool	Place::enabled;
 	PType	Place::type;	//Œš•¨‚Ìƒ^ƒCƒv
@@ -123,7 +133,7 @@ public:
 	void	Chip::drawRoad(const Color& _color, const double& _width);
 	Chip&	Chip::getNearChip(const int& _r);
 	Rect	Chip::getDrawRect() const { return Rect(THIS*ChipImageSize, Point(ChipImageSize, ChipImageSize)); }
-	bool	Chip::canSetRoad() const { return isLand && getPlace() == NULL; }
+	bool	Chip::canSetRoad() const { return isLand && (getPlace() == NULL || isRoad); }
 	Vec2	Chip::getGlobalPos() const { return Vec2(THIS*ChipImageSize).movedBy(ChipImageSize / 2, ChipImageSize / 2); }
 public:
 	bool	Chip::isRoad;
@@ -154,10 +164,14 @@ public:
 	void	Unit::drawBody() const;
 	void	Unit::update(const int& _actionPoint);
 	bool	Unit::searchAndSetHome();
+	bool	Unit::searchAndSetWorkplace();
 	bool	Unit::goTo(const Point& _pos);
+	Vec2	Unit::getRealPos() const;
 public:
 	Point	Unit::tarPos;
 	PPointer Unit::home;
+	PPointer Unit::workplace;
+	PPointer Unit::targetPlace;
 	int		Unit::rootNow;
 	int		Unit::rootMax;
 	double	Unit::rootTimer[UnitRootMax];

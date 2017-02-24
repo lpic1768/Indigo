@@ -2,31 +2,49 @@
 Unit units[UnitMax];
 void Unit::reset()
 {
-	this->enabled = false;
-	this->items.reset();
-	this->timerNow = 0;
-	this->timerMax = 0;
-	this->pos = Point(0, 0);
-	this->addPos = Vec2(0, 0);
-	this->message = L"";
+	tarPos = Point(0,0);
+	home.setPlace(NULL);
+	targetPlace.setPlace(NULL);
+	workplace.setPlace(NULL);
+	rootNow = 0;
+	rootMax = 0;
+	for (auto& r : rootTimer) r = 0.0;
+	for (auto& r : rootAng) r = Vec2(1, 0);
+	enabled = false;
+	message = L"";
+	items.reset();
 	isInPlace = false;
 	isMoving = false;
 	movingSpeed = 0;
-	movingAng = Vec2(0, 0);
-	home.setPlace(NULL);
+	movingAng = Vec2(1,0);
+	timerNow = 0;	//汎用タイマ
+	timerMax = 0;	//汎用タイマ
+	pos = Point(0,0);		//内部座標	Chipに基づく
+	addPos = Vec2(0,0);		//追加座標。建物内部や、移動中を表す
+
 }
-bool	Unit::goTo(const Point& _pos)
+bool Unit::goTo(const Point& _pos)
 {
 	//addPosを0に
 	timerMax = int(addPos.length());
-	movingAng = -addPos.normalized();
 	movingSpeed = 1.0;
-	rootAng[0] = -addPos.normalized();
+	rootNow = 0;
+	rootMax = 0;
+	if (timerMax > 0)
+	{
+		movingAng = -addPos.normalized();
+		rootAng[0] = -addPos.normalized();
+	}
+	else
+	{
+		movingAng = Vec2(0, 0);
+		rootAng[0] = Vec2(0, 0);
+	}
 	rootTimer[0] = addPos.length();
 	isMoving = true;
 	tarPos = _pos;
 
-	if (_pos == pos) return true;
+	if (_pos == pos) { return true; }
 	//新型ルート検索システム
 	temp[0] = &getChip(_pos);
 	int j = 1;
@@ -98,13 +116,13 @@ bool	Unit::goTo(const Point& _pos)
 	rootNow = 0;
 	return true;
 }
-bool	Unit::searchAndSetHome()
+bool Unit::searchAndSetHome()
 {
 	temp[0] = &getChip(pos);
 	int c = 1;
 	for (int j = 0;; j++)
 	{
-		if (temp[j] == NULL) { resetTemp();  return false; }
+		if (temp[j] == NULL) { resetTemp(); return false; }
 		if (temp[j]->getPlace() != NULL && temp[j]->getPlace()->type == House) { home.setPlace(temp[j]->getPlace()); resetTemp(); return true; }
 		for (int i = 0; i < 4; i++)
 		{
@@ -116,7 +134,25 @@ bool	Unit::searchAndSetHome()
 		}
 	}
 }
-bool	Unit::set(const Vec2& _globalPos)
+bool Unit::searchAndSetWorkplace()
+{
+	temp[0] = &getChip(pos);
+	int c = 1;
+	for (int j = 0;; j++)
+	{
+		if (temp[j] == NULL) { resetTemp(); return false; }
+		if (temp[j]->getPlace() != NULL && temp[j]->getPlace()->type == Farm) { workplace.setPlace(temp[j]->getPlace()); resetTemp(); return true; }
+		for (int i = 0; i < 4; i++)
+		{
+			if (temp[j]->getNearChip(i).isRoad && !temp[j]->getNearChip(i).flag) {
+				temp[c] = &temp[j]->getNearChip(i);
+				temp[c]->flag = true;
+				c++;
+			}
+		}
+	}
+}
+bool Unit::set(const Vec2& _globalPos)
 {
 	if (enabled) return false;
 	enabled = true;
@@ -135,16 +171,21 @@ void	Unit::drawBody() const
 
 
 	//Rootの表示
-	Vec2 drawPos = getChip(pos).getGlobalPos();
-	for (int i = 1; i <= rootMax; i++)
+	if (isMoving)
 	{
-		Line(drawPos, drawPos + rootTimer[i] * rootAng[i]).draw(3, Color(255,0,0));
-		drawPos += rootTimer[i] * rootAng[i];
+		Vec2 drawPos = getChip(pos).getGlobalPos().movedBy(addPos).movedBy(rootTimer[rootNow] * rootAng[rootNow]);
+		Line(getChip(pos).getGlobalPos().movedBy(addPos).movedBy(movingAng*movingSpeed*timerNow), drawPos).draw(3, Color(255, 0, 0));
+		for (int i = rootNow + 1; i <= rootMax; i++)
+		{
+			Line(drawPos, drawPos + rootTimer[i] * rootAng[i]).draw(3, Color(255, 0, 0));
+			drawPos += rootTimer[i] * rootAng[i];
+		}
 	}
 
 	const double unitRadius = 8.0;
 	const Color unitColor(255, 0, 0);
-	Circle(getChip(pos).getGlobalPos().movedBy(addPos).movedBy(movingAng*movingSpeed*timerNow), unitRadius).draw(unitColor);
+	Circle(getRealPos(), unitRadius).draw(unitColor);
+	if (selectedUnit == this) Circle(getRealPos(), unitRadius).draw(Palette::Blue);
 }
 void	Unit::update(const int& _actionPoint)
 {
@@ -164,51 +205,43 @@ void	Unit::update(const int& _actionPoint)
 			else
 			{
 				actionPoint -= (timerMax - timerNow);
-				if (isMoving)
-				{
-					if (rootNow == rootMax)
-					{
-						rootNow = 0;
-						rootMax = 0;
-						isMoving = false;
-						addPos = Point(0, 0);
-						pos = tarPos;
-						timerMax = 0;
-						timerNow = 0;
-					}
-					else
-					{
-						addPos += rootAng[rootNow] * movingSpeed*rootTimer[rootNow];
-						rootNow++;
-						movingAng = rootAng[rootNow];
-						timerMax = int(rootTimer[rootNow]);
-						timerNow = 0;
-					}
-				}
-				else
-				{
-					timerMax = 0;
-					timerNow = 0;
-				}
+				timerMax = 0;
+				timerNow = 0;
 			}
 		}
 		else
 		{
-			if (getChip(pos).getPlace() == NULL || getChip(pos).getPlace()->type != House)
+			if (isMoving)
 			{
-				if (searchAndSetHome())
+				if (rootNow == rootMax)
 				{
-					goTo(home.getPlace()->getEntrancePos());
+					addPos = Vec2(0, 0);
+					rootNow = 0;
+					rootMax = 0;
+					isMoving = false;
+					movingSpeed = 0;
+					pos = tarPos;
 				}
-				else timerMax = 60;
+				else
+				{
+					addPos += rootAng[rootNow] * movingSpeed*rootTimer[rootNow];
+					rootNow++;
+					movingAng = rootAng[rootNow];
+					timerMax = int(rootTimer[rootNow]);
+				}
 			}
 			else
 			{
-				actionPoint = 0;
-				break;
+				if (targetPlace.getPlace() == NULL) timerMax = 60;
+				else if (getChip(pos).getPlace() == targetPlace.getPlace()) timerMax = 60;
+				else if (!isConnectedByRoad(pos, targetPlace.getPlace()->getEntrancePos())) timerMax = 60;
+				else goTo(targetPlace.getPlace()->getEntrancePos());
 			}
-
 		}
 	}
 
+}
+Vec2	Unit::getRealPos() const
+{
+	return getChip(pos).getGlobalPos().movedBy(addPos).movedBy(movingAng*movingSpeed*timerNow);
 }

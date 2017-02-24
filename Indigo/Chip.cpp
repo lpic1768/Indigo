@@ -77,7 +77,7 @@ bool isConnectedByRoad(const Point& _posA, const Point& _posB)
 }
 bool isConnectedByLand(const Point& _posA, const Point& _posB)
 {
-	if (!getChip(_posA).isLand || !getChip(_posB).isLand) return false;
+	if (!getChip(_posA).isLand || !getChip(_posB).isLand || (getChip(_posB).getPlace() != NULL && !getChip(_posB).isRoad) || (getChip(_posA).getPlace() != NULL && !getChip(_posA).isRoad)) return false;
 	temp[0] = &getChip(_posA);
 	int c = 1;
 	for (int j = 0;; j++)
@@ -86,7 +86,7 @@ bool isConnectedByLand(const Point& _posA, const Point& _posB)
 		if (temp[j] == &getChip(_posB)) { resetTemp(); return true; }
 		for (int i = 0; i < 4; i++)
 		{
-			if (temp[j]->getNearChip(i).isLand && temp[j]->getNearChip(i).getPlace() == NULL && !temp[j]->getNearChip(i).flag) {
+			if (temp[j]->getNearChip(i).isLand &&( temp[j]->getNearChip(i).getPlace() == NULL || temp[j]->getNearChip(i).isRoad) && !temp[j]->getNearChip(i).flag) {
 				temp[c] = &temp[j]->getNearChip(i);
 				temp[c]->flag = true;
 				c++;

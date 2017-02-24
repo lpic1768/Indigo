@@ -45,9 +45,15 @@ void	Place::drawName(const int& _type) const
 	const int frameWidth = 4;
 	if (!enabled) return;
 	Rect drawRect((pos*ChipImageSize).movedBy(frameWidth, frameWidth), (getSize()*ChipImageSize).movedBy(-frameWidth * 2, -frameWidth * 2));
+	Color color = getDrawColor();
+
+	if (iMode == SettingRoadMode && (nowSelectedChip->getPlace() == this || (previousSelectedChip != NULL && previousSelectedChip->getPlace() == this))) color = Palette::Lightgreen;
+	if (selectedUnit != NULL && selectedPlace == this) color = Palette::Blue;
+
 	if (_type == 1) drawRect.draw(Color(255, 0, 0, 128));
-	else drawRect.draw(getDrawColor());
+	else drawRect.draw(color);
 	FontAsset(L"drawPlaceNameFont").drawCenter(getNameAsString(), (pos + Vec2(getSize()) / 2)*ChipImageSize);
+	FontAsset(L"drawPlaceNameFont").drawCenter(Format(capacity, L"/", getCapacityMax()), ((pos + Vec2(getSize()) / 2)*ChipImageSize).movedBy(0, 32));
 }
 
 void	Place::erase()
@@ -102,14 +108,9 @@ Point	Place::getSize() const
 	if (r % 2 == 1) return Point(placeData[type].size.y, placeData[type].size.x);
 	else return placeData[type].size;
 }
-Color	Place::getDrawColor() const
-{
-	return placeData[type].color;
-}
-String	Place::getNameAsString() const
-{
-	return placeData[type].name;
-}
+Color	Place::getDrawColor() const { return placeData[type].color; }
+String	Place::getNameAsString() const { return placeData[type].name; }
+int		Place::getCapacityMax() const { return placeData[type].capacityMax; }
 Point	Place::getEntrancePos() const
 {
 	switch (r)
