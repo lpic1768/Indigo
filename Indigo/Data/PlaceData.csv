@@ -1,3 +1,5 @@
-House,’·‰®,"(2,3)",1,"(64,255,64,255)",4
-Market,–â‰®,"(4,4)",1,"(255,255,0,255)",0
-Farm,”_ê,"(5,5)",2,"(0,0,128,255)",2
+CodeName,PlaceName,Size,EntrancePos,MainColor,UnitCapacity,isHome,isWorkPlace,JobType
+Market,–â‰®,"(4,4)",1,"(255,255,0,255)",10,false,true,3
+TreeHouse,–Ø‚±‚è¬‰®,"(3,3)",1,"(0,0,128,255)",10,false,true,2
+Barn,”[‰®,"(3,3)",1,"(128,255,128)",10,false,true,1
+Brewery,ø‘¢Š,"(3,3)",1,"(0,0,255)",10,false,true,4

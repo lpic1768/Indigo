@@ -6,9 +6,10 @@ void	Place::reset()
 {
 	enabled = false;
 	type = House;
-	item.reset();
+	items.reset(1000);
 	pos = Point(0, 0);
 	r = 0;
+	capacity = 0;
 }
 void	Place::drawFrame(const int& _type) const
 {
@@ -48,10 +49,24 @@ void	Place::drawName(const int& _type) const
 	Color color = getDrawColor();
 
 	if (iMode == SettingRoadMode && (nowSelectedChip->getPlace() == this || (previousSelectedChip != NULL && previousSelectedChip->getPlace() == this))) color = Palette::Lightgreen;
-	if (selectedUnit != NULL && selectedPlace == this) color = Palette::Blue;
+
 
 	if (_type == 1) drawRect.draw(Color(255, 0, 0, 128));
 	else drawRect.draw(color);
+
+
+	//Item‚Ì•\Ž¦
+	int j = 0;
+	for (int i = 0; i < ITEM_MAX; i++)
+	{
+		if (items.getNumItem(i) > 0)
+		{
+			TextureAsset(L"items")(16 * i, 0, 16, 16).drawAt((pos*ChipImageSize).movedBy(8, 8).movedBy(frameWidth, j + frameWidth));
+			FontAsset(L"drawUnitItemFont")(L"x", items.getNumItem(i)).draw(((pos*ChipImageSize).movedBy(8, 8).movedBy(frameWidth, j + frameWidth)).movedBy(8, -8), Palette::Black);
+			j += 16;
+		}
+	}
+
 	FontAsset(L"drawPlaceNameFont").drawCenter(getNameAsString(), (pos + Vec2(getSize()) / 2)*ChipImageSize);
 	FontAsset(L"drawPlaceNameFont").drawCenter(Format(capacity, L"/", getCapacityMax()), ((pos + Vec2(getSize()) / 2)*ChipImageSize).movedBy(0, 32));
 }
@@ -63,8 +78,9 @@ void	Place::erase()
 	for (int x = pos.x; x < pos.x + getSize().x; x++)
 		for (int y = pos.y; y < pos.y + getSize().y; y++)
 			getChip(x, y).setPlace(NULL);
+	reset();
 }
-void	Place::set(const int& _r, const Point& _pos, const PType& _t)
+void	Place::set(const int& _r, const Point& _pos, const int& _t)
 {
 	type = _t;
 	pos = _pos;
@@ -74,9 +90,10 @@ void	Place::set(const int& _r, const Point& _pos, const PType& _t)
 	for (int x = _pos.x; x < _pos.x + getSize().x; x++)
 		for (int y = _pos.y; y < _pos.y + getSize().y; y++)
 			getChip(x, y).setPlace(this);
+	if (_t == Market) items.addItem(Wheat, 1000);
 	getChip(getEntrancePos()).isRoad = true;
 }
-bool canSetPlace(const int& _r, const Point& _pos, const PType& _t)
+bool canSetPlace(const int& _r, const Point& _pos, const int& _t)
 {
 	Place p;	//‰¼‘z
 	p.r = _r;
@@ -85,13 +102,13 @@ bool canSetPlace(const int& _r, const Point& _pos, const PType& _t)
 	{
 		for (int y = _pos.y; y < _pos.y + p.getSize().y; y++)
 		{
-			if (getChip(x, y).getPlace() != NULL || getChip(x, y).isRoad || !getChip(x, y).isLand) return false;
+			if (getChip(x, y).getPlace() != NULL || getChip(x, y).isForest || getChip(x, y).isFarm || getChip(x, y).isRoad || !getChip(x, y).isLand) return false;
 
 		}
 	}
 	return true;
 }
-bool setPlace(const int& _r, const Point& _pos, const PType& _t)
+bool setPlace(const int& _r, const Point& _pos, const int& _t)
 {
 	for (auto& p : places)
 	{
@@ -111,6 +128,9 @@ Point	Place::getSize() const
 Color	Place::getDrawColor() const { return placeData[type].color; }
 String	Place::getNameAsString() const { return placeData[type].name; }
 int		Place::getCapacityMax() const { return placeData[type].capacityMax; }
+bool	Place::isHouse() const { return placeData[type].isHouse; }
+bool	Place::isWorkPlace() const { return placeData[type].isWorkPlace; }
+int		Place::getJobType() const { return placeData[type].jobType; }
 Point	Place::getEntrancePos() const
 {
 	switch (r)

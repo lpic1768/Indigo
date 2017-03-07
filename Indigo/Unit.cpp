@@ -2,29 +2,30 @@
 Unit units[UnitMax];
 void Unit::reset()
 {
-	tarPos = Point(0,0);
+	tarPos = Point(0, 0);
 	home.setPlace(NULL);
-	targetPlace.setPlace(NULL);
-	workplace.setPlace(NULL);
 	rootNow = 0;
+	needFood = false;
 	rootMax = 0;
 	for (auto& r : rootTimer) r = 0.0;
 	for (auto& r : rootAng) r = Vec2(1, 0);
 	enabled = false;
 	message = L"";
-	items.reset();
+	items.reset(100);
 	isInPlace = false;
 	isMoving = false;
 	movingSpeed = 0;
-	movingAng = Vec2(1,0);
-	timerNow = 0;	//汎用タイマ
+	movingAng = Vec2(1, 0);
+	timerNow = 0;	//汎用タイマ                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 	timerMax = 0;	//汎用タイマ
-	pos = Point(0,0);		//内部座標	Chipに基づく
-	addPos = Vec2(0,0);		//追加座標。建物内部や、移動中を表す
-
+	pos = Point(0, 0);		//内部座標	Chipに基づく
+	addPos = Vec2(0, 0);		//追加座標。建物内部や、移動中を表す
+	jobType = Laborer;
+	workStopPenalty = false;
 }
 bool Unit::goTo(const Point& _pos)
 {
+	resetTemp();
 	//addPosを0に
 	timerMax = int(addPos.length());
 	movingSpeed = 1.0;
@@ -45,32 +46,63 @@ bool Unit::goTo(const Point& _pos)
 	tarPos = _pos;
 
 	if (_pos == pos) { return true; }
-	//新型ルート検索システム
-	temp[0] = &getChip(_pos);
-	int j = 1;
-	for (int i = 0;; i++)
+
+	int cost = 3, c = 0;
 	{
-		if (temp[i] == NULL) { resetTemp(); return false; }
-		if (temp[i] == &getChip(pos)) { break; }
-		for (int k = 0; k < 4; k++)
+		Chip& goal = getChip(_pos);
+		goal.flag = true;
+		goal.number = 1;
+		temp[c] = &goal;
+		c++;
+		for (int i = 0; i < 4; i++)
 		{
-			if (temp[i]->getNearChip(k).flag == false &&
-				temp[i]->getNearChip(k).isRoad)
-			{
-				temp[j] = &temp[i]->getNearChip(k);
-				temp[j]->ang = (k + 2) % 4;
-				temp[j]->flag = true;
-				j++;
-			}
+			if (!canMove(goal.getNearChip(i).THIS)) continue;
+			temp[c] = &goal.getNearChip(i);
+			temp[c]->ang = (i + 2) % 4;
+			c++;
+			goal.getNearChip(i).flag = true;
 		}
 	}
+	for (;;)
+	{
+		for (int i = 0; i < c; i++)
+		{
+			if (temp[i] == NULL) break;
+			if (temp[i]->number != 0) continue;
+			for (int k = 0; k < 4; k++)
+			{
+				if (temp[i]->getNearChip(k).number != 0)
+				{
+					if ((temp[i]->getNearChip(k).ang == k && cost >= 3 * temp[i]->getNearChip(k).getRoadLevel() + temp[i]->getNearChip(k).number) ||
+						(temp[i]->getNearChip(k).ang != k && cost >= 2 * temp[i]->getNearChip(k).getRoadLevel() + temp[i]->getNearChip(k).number))
+					{
+						temp[i]->number = cost;
+						temp[i]->ang = k;
+						for (int o = 0; o < 4; o++)
+						{
+							if (canMove(temp[i]->getNearChip(o).THIS) && !temp[i]->getNearChip(o).flag)
+							{
+								temp[c] = &(temp[i]->getNearChip(o));
+								temp[c]->flag = true;
+								c++;
+							}
+						}
+						break;
+					}
+				}
+			}
+		}
+		if (getChip(pos).number != 0) break;
+		cost++;
+	}
 	resetTemp();
+
 
 	//ルートを登録
 
 	Chip& goal = getChip(_pos);
 	Chip* now = &getChip(pos);
-	j = 1;
+	int j = 1;
 	Vec2 nowPos = getChip(pos).getGlobalPos();
 	Vec2 nextPos;
 	Vec2 realPos = getChip(pos).getGlobalPos();
@@ -116,17 +148,46 @@ bool Unit::goTo(const Point& _pos)
 	rootNow = 0;
 	return true;
 }
-bool Unit::searchAndSetHome()
+bool	Unit::goTo(const int& _type)
 {
 	temp[0] = &getChip(pos);
 	int c = 1;
 	for (int j = 0;; j++)
 	{
 		if (temp[j] == NULL) { resetTemp(); return false; }
-		if (temp[j]->getPlace() != NULL && temp[j]->getPlace()->type == House) { home.setPlace(temp[j]->getPlace()); resetTemp(); return true; }
+
+		switch (_type)
+		{
+		case GoToHome:
+			if (temp[j]->getPlace() != NULL && temp[j]->getPlace() == home.getPlace()) {
+				return goTo(temp[j]->THIS);
+			}
+			break;
+		case GoToForest:
+			if (temp[j]->isForest && temp[j]->growth == 3 && !temp[j]->isUsedByUnit)
+			{
+				temp[j]->isUsedByUnit = true;
+				return goTo(temp[j]->THIS);
+			}
+			break;
+		case GoToFarm:
+			if (temp[j]->isFarm && temp[j]->growth % 2 == 0 && !temp[j]->isUsedByUnit)
+			{
+				temp[j]->isUsedByUnit = true;
+				return goTo(temp[j]->THIS);
+			}
+			break;
+
+		default:
+			Println(L"goTo() Error 0x01");
+			resetTemp();
+			return false;
+		}
+
+
 		for (int i = 0; i < 4; i++)
 		{
-			if (temp[j]->getNearChip(i).isRoad && !temp[j]->getNearChip(i).flag) {
+			if (canMove(temp[j]->getNearChip(i).THIS) && temp[j]->getNearChip(i).flag == false) {
 				temp[c] = &temp[j]->getNearChip(i);
 				temp[c]->flag = true;
 				c++;
@@ -134,17 +195,22 @@ bool Unit::searchAndSetHome()
 		}
 	}
 }
-bool Unit::searchAndSetWorkplace()
+bool	Unit::goToTakeItem(const int& _itemID)
 {
 	temp[0] = &getChip(pos);
 	int c = 1;
 	for (int j = 0;; j++)
 	{
 		if (temp[j] == NULL) { resetTemp(); return false; }
-		if (temp[j]->getPlace() != NULL && temp[j]->getPlace()->type == Farm) { workplace.setPlace(temp[j]->getPlace()); resetTemp(); return true; }
+
+		if (temp[j]->getPlace() != NULL && temp[j]->getPlace()->items.getNumItem(_itemID) > 0) {
+			return goTo(temp[j]->THIS);
+		}
+
+
 		for (int i = 0; i < 4; i++)
 		{
-			if (temp[j]->getNearChip(i).isRoad && !temp[j]->getNearChip(i).flag) {
+			if (canMove(temp[j]->getNearChip(i).THIS) && temp[j]->getNearChip(i).flag == false) {
 				temp[c] = &temp[j]->getNearChip(i);
 				temp[c]->flag = true;
 				c++;
@@ -169,6 +235,8 @@ void	Unit::drawBody() const
 {
 	if (!enabled) return;
 
+	const double unitRadius = 8.0;
+	const Color unitColor = HSV(jobType * 90);
 
 	//Rootの表示
 	if (isMoving)
@@ -182,10 +250,19 @@ void	Unit::drawBody() const
 		}
 	}
 
-	const double unitRadius = 8.0;
-	const Color unitColor(255, 0, 0);
-	Circle(getRealPos(), unitRadius).draw(unitColor);
-	if (selectedUnit == this) Circle(getRealPos(), unitRadius).draw(Palette::Blue);
+	Circle(getRealPos(), unitRadius).draw(unitColor).drawFrame(0, 2, Palette::Black);
+
+	//Itemの表示
+	int j = 12;
+	for (int i = 0; i < ITEM_MAX; i++)
+	{
+		if (items.getNumItem(i) > 0)
+		{
+			TextureAsset(L"items")(16 * i, 0, 16, 16).drawAt(getRealPos().movedBy(0, -j));
+			FontAsset(L"drawUnitItemFont")(L"x", items.getNumItem(i)).draw((getRealPos().movedBy(0, -j)).movedBy(8, -8), Palette::White);
+			j += 12;
+		}
+	}
 }
 void	Unit::update(const int& _actionPoint)
 {
@@ -232,10 +309,118 @@ void	Unit::update(const int& _actionPoint)
 			}
 			else
 			{
-				if (targetPlace.getPlace() == NULL) timerMax = 60;
-				else if (getChip(pos).getPlace() == targetPlace.getPlace()) timerMax = 60;
-				else if (!isConnectedByRoad(pos, targetPlace.getPlace()->getEntrancePos())) timerMax = 60;
-				else goTo(targetPlace.getPlace()->getEntrancePos());
+				if (needFood)
+				{
+					if (getPlace() != NULL && getPlace()->items.getNumItem(Sake) != 0)
+					{
+						getPlace()->items.pullItem(Sake, 1);
+						needFood = false;
+					}
+					else if (getPlace() != NULL && getPlace()->items.getNumItem(Wheat) != 0)
+					{
+						getPlace()->items.pullItem(Wheat, 1);
+						needFood = false;
+					}
+					else if (!goToTakeItem(Sake) && !goToTakeItem(Wheat)) timerMax = 3600;
+				}
+				else if(!workStopPenalty)
+				{
+					switch (jobType)
+					{
+					case Laborer: workStopPenalty = true;
+						break;
+					case Farmer:
+						if (getChip(pos).getPlace() == home.getPlace() && home.getPlace() != NULL)
+						{
+							getChip(pos).getPlace()->items.addItem(Wheat, items.getNumItem(Wheat));
+							items.pullItem(Wheat, items.getNumItem(Wheat));
+
+							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+						}
+						else if (items.getNumAllItem() >= 10)
+						{
+							if (!goTo(GoToHome)) timerMax = 3600;
+						}
+						else if (!getChip(pos).isFarm || getChip(pos).growth % 2 == 1)
+						{
+							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+						}
+						else
+						{
+							if (getChip(pos).growth == 12)
+							{
+								getChip(pos).growth = 1;
+								items.addItem(Wheat, 5);
+							}
+							else
+							{
+								getChip(pos).growth++;
+								timerMax = 180;
+							}
+							getChip(pos).isUsedByUnit = false;
+						}
+						break;
+					case Lumberjack:
+						if (getChip(pos).getPlace() == home.getPlace() && home.getPlace() != NULL)
+						{
+							getChip(pos).getPlace()->items.addItem(Wood, items.getNumItem(Wood));
+							items.pullItem(Wood, items.getNumItem(Wood));
+							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+						}
+						else if (items.getNumAllItem() >= 10)
+						{
+							if (!goTo(GoToHome)) timerMax = 3600;
+						}
+						else if (!getChip(pos).isForest || getChip(pos).growth != 3)
+						{
+							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+						}
+						else
+						{
+							getChip(pos).isUsedByUnit = false;
+							getChip(pos).growth = 0;
+							items.addItem(Wood, 10);
+							timerMax = 360;
+						}
+						break;
+					case Merchant:
+						timerMax = 3600;
+						break;
+					case Brewer:
+						if (items.getNumItem(Wheat) == 0)
+						{
+							if (getPlace() == NULL || getPlace()->items.getNumItem(Wheat) == 0) { if (!goToTakeItem(Wheat)) timerMax = 3600; }
+							else
+							{
+								getPlace()->items.pullItem(Wheat, 1);
+								items.addItem(Wheat, 1);
+							}
+						}
+						else if (items.getNumItem(Wood) == 0)
+						{
+							if (getPlace() == NULL || getPlace()->items.getNumItem(Wood) == 0) { if (!goToTakeItem(Wood)) timerMax = 3600; }
+							else
+							{
+								getPlace()->items.pullItem(Wood, 1);
+								items.addItem(Wood, 1);
+							}
+						}
+						else
+						{
+							if (getPlace() != home.getPlace()) { if (!goTo(GoToHome)) timerMax = 3600; }
+							else
+							{
+								items.pullItem(Wheat, 1);
+								items.pullItem(Wood, 1);
+								getPlace()->items.addItem(Sake, 1);
+								timerMax = 3600;
+							}
+						}
+						break;
+					default: workStopPenalty = true; break;
+					}
+				}
+				else return;
 			}
 		}
 	}
@@ -244,4 +429,17 @@ void	Unit::update(const int& _actionPoint)
 Vec2	Unit::getRealPos() const
 {
 	return getChip(pos).getGlobalPos().movedBy(addPos).movedBy(movingAng*movingSpeed*timerNow);
+}
+bool	Unit::setPlace(Place* _p)
+{
+	if (_p->getCapacityMax() > _p->capacity)
+	{
+		if (home.getPlace() != NULL) home.getPlace()->capacity--;
+		home.setPlace(_p);
+		_p->capacity++;
+		jobType = _p->getJobType();
+		return true;
+
+	}
+	else return false;
 }

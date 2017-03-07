@@ -3,7 +3,6 @@
 Chip chips[ChipXMax][ChipYMax];
 int chipX = ChipXMax;
 int chipY = ChipYMax;
-double sec = 0.0;
 Image mapImage(ChipXMax, ChipYMax);
 
 Chip* nowSelectedChip = NULL;
@@ -17,27 +16,42 @@ void	Chip::reset()
 	this->isLand = false;
 	setPlace(NULL);
 	this->flag = false;
+	isForest = false;
+	isFarm = false;
+	growth = 0;
+	isUsedByUnit = false;
 }
+
 PerlinNoise noise(Random(2048));
 void	Chip::drawGround()
 {
 	const Rect drawRect = getDrawRect();
-	if (flag) drawRect.draw(Palette::Red);
-	else if (isLand) drawRect.draw(Palette::Green);
-	else drawRect.draw(Palette::Blue);
+
+	if (flag)
+	{
+		drawRect.draw(Palette::Red);
+	}
+	else if (isLand)
+	{
+		Color groundColor = PlainsColor;
+		if (isForest) groundColor = ForestColor;
+		if (isFarm) groundColor = FarmColor;
+		drawRect.draw(groundColor);
+	}
+	else drawRect.draw(OceanColor);
 }
 
 void	Chip::drawRoad(const Color& _color, const double& _width)
 {
 	if (!isRoad) return;
-	for (int i = 0; i < 2; i++) if (getNearChip(i).isRoad) Circle((THIS + getNearChip(i).THIS).movedBy(1, 1) / 2.0 * ChipImageSize, _width / 2.0).draw(_color);
+	for (int i = 0; i < 4; i++) if (getNearChip(i).isRoad || getNearChip(i).isForest) Circle((THIS + getNearChip(i).THIS).movedBy(1, 1) / 2.0 * ChipImageSize, _width / 2.0).draw(_color);
 	for (int i = 0; i < 4; i++)
 	{
-		if (getNearChip(i).isRoad)
+		if (getNearChip(i).isRoad || getNearChip(i).isForest)
 		{
 			for (int j = i + 1; j < 4; j++)
 			{
-				if (getNearChip(j).isRoad)
+				if (getNearChip(j).isRoad || getNearChip(j).isForest)
 				{
 					const Vec2 direction = Vec2(getNearChip(j).THIS - getNearChip(i).THIS).normalized()*_width / 2.0;
 					Line(Vec2((THIS + getNearChip(i).THIS).movedBy(1, 1) * ChipImageSize / 2.0) + direction,
@@ -53,6 +67,7 @@ void resetTemp()
 	{
 		if (t == NULL)  return;
 		t->flag = false;
+		t->number = 0;
 		t = NULL;
 	}
 }
@@ -60,6 +75,7 @@ bool isConnectedByRoad(const Point& _posA, const Point& _posB)
 {
 	if (!getChip(_posA).isRoad || !getChip(_posB).isRoad) return false;
 	temp[0] = &getChip(_posA);
+
 	int c = 1;
 	for (int j = 0;; j++)
 	{
@@ -77,7 +93,7 @@ bool isConnectedByRoad(const Point& _posA, const Point& _posB)
 }
 bool isConnectedByLand(const Point& _posA, const Point& _posB)
 {
-	if (!getChip(_posA).isLand || !getChip(_posB).isLand || (getChip(_posB).getPlace() != NULL && !getChip(_posB).isRoad) || (getChip(_posA).getPlace() != NULL && !getChip(_posA).isRoad)) return false;
+	if (!getChip(_posA).canSetRoad() || !getChip(_posB).canSetRoad()) return false;
 	temp[0] = &getChip(_posA);
 	int c = 1;
 	for (int j = 0;; j++)
@@ -86,7 +102,7 @@ bool isConnectedByLand(const Point& _posA, const Point& _posB)
 		if (temp[j] == &getChip(_posB)) { resetTemp(); return true; }
 		for (int i = 0; i < 4; i++)
 		{
-			if (temp[j]->getNearChip(i).isLand &&( temp[j]->getNearChip(i).getPlace() == NULL || temp[j]->getNearChip(i).isRoad) && !temp[j]->getNearChip(i).flag) {
+			if (temp[j]->getNearChip(i).canSetRoad() && !temp[j]->getNearChip(i).flag) {
 				temp[c] = &temp[j]->getNearChip(i);
 				temp[c]->flag = true;
 				c++;

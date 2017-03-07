@@ -6,7 +6,7 @@ Place makingHouseP;
 
 bool setButton(const int& _imageNumber, const Point _pos, const IMode& _mode, const Size _size = Point(64, 64))
 {
-	TextureAsset(Format(L"b", _imageNumber + (_mode == iMode))).draw(_pos);
+	TextureAsset(L"button")((_mode == iMode) * 64 + 1, _imageNumber * 64 + 1, 62, 62).resize(_size).draw(_pos);
 	if (Rect(_pos, _size).mouseOver)
 	{
 		mouseOverInterface = true;
@@ -19,12 +19,77 @@ bool setButton(const int& _imageNumber, const Point _pos, const IMode& _mode, co
 	}
 	return false;
 }
+void destroyFarm()
+{
+	if (!Input::MouseL.pressed)
+	{
+		if (previousSelectedChip != NULL)
+		{
+			int xMin, yMin, xMax, yMax;
+			if (previousSelectedChip->THIS.x >= nowSelectedChip->THIS.x) { xMin = nowSelectedChip->THIS.x; xMax = previousSelectedChip->THIS.x; }
+			else { xMin = previousSelectedChip->THIS.x; xMax = nowSelectedChip->THIS.x; }
+			if (previousSelectedChip->THIS.y >= nowSelectedChip->THIS.y) { yMin = nowSelectedChip->THIS.y; yMax = previousSelectedChip->THIS.y; }
+			else { yMin = previousSelectedChip->THIS.y; yMax = nowSelectedChip->THIS.y; }
+			for (int x = xMin; x <= xMax; x++)
+			{
+				for (int y = yMin; y <= yMax; y++)
+				{
+					if (getChip(x, y).isFarm)
+					{
+						getChip(x, y).isFarm = false;
+						mapImage[y][x] = PlainsColor;
+					}
+				}
+			}
+			mapTexture = Texture(mapImage);	//Texture‚É”½‰f
+			SoundAsset(L"4").playMulti(soundVolume);
+		}
+		previousSelectedChip = NULL;
+	}
+	if (nowSelectedChip == NULL) return;
+	if (Input::MouseL.clicked) previousSelectedChip = nowSelectedChip;
+}
+void makeFarm()
+{
+
+	if (!Input::MouseL.pressed)
+	{
+		if (previousSelectedChip != NULL)
+		{
+			int xMin, yMin, xMax, yMax;
+			if (previousSelectedChip->THIS.x >= nowSelectedChip->THIS.x) { xMin = nowSelectedChip->THIS.x; xMax = previousSelectedChip->THIS.x; }
+			else { xMin = previousSelectedChip->THIS.x; xMax = nowSelectedChip->THIS.x; }
+			if (previousSelectedChip->THIS.y >= nowSelectedChip->THIS.y) { yMin = nowSelectedChip->THIS.y; yMax = previousSelectedChip->THIS.y; }
+			else { yMin = previousSelectedChip->THIS.y; yMax = nowSelectedChip->THIS.y; }
+			for (int x = xMin; x <= xMax; x++)
+			{
+				for (int y = yMin; y <= yMax; y++)
+				{
+					if (getChip(x, y).isLand && !getChip(x, y).isForest && !getChip(x, y).isFarm && getChip(x, y).getPlace() == NULL && !getChip(x, y).isRoad)
+					{
+						getChip(x, y).isFarm = true;
+						mapImage[y][x] = FarmColor;
+					}
+				}
+			}
+			mapTexture = Texture(mapImage);	//Texture‚É”½‰f
+			SoundAsset(L"1").playMulti(soundVolume);
+		}
+		previousSelectedChip = NULL;
+	}
+	if (nowSelectedChip == NULL) return;
+	if (Input::MouseL.clicked) previousSelectedChip = nowSelectedChip;
+}
 void unitFallDown()
 {
 	if (nowSelectedChip == NULL) return;
 	if (Input::MouseL.clicked && nowSelectedChip->isLand && (nowSelectedChip->isRoad || nowSelectedChip->getPlace() != NULL))
 	{
-		for (auto& u : units) if (u.set(mousePosAsGlobalVec2)) { SoundAsset(L"3").playMulti(); break; }
+		for (auto& u : units) if (u.set(nowMousePosAsGlobalVec2)) {
+			if (nowSelectedChip->getPlace() != NULL) u.setPlace(nowSelectedChip->getPlace());
+			SoundAsset(L"3").playMulti(soundVolume);
+			break;
+		}
 	}
 }
 void makeVillage()
@@ -32,7 +97,7 @@ void makeVillage()
 	if (nowSelectedChip == NULL || !nowSelectedChip->isLand) return;
 	if (Input::MouseL.clicked)
 	{
-		SoundAsset(L"6").playMulti();
+		SoundAsset(L"6").playMulti(soundVolume);
 		SetVillage(nowSelectedChip->THIS);
 	}
 }
@@ -43,18 +108,15 @@ void makeHouse()
 	if (Input::KeyR.clicked) makingHouseP.r = (makingHouseP.r + 1) % 4;
 	if (Input::KeyE.clicked)
 	{
-		switch (makingHouseP.type)
-		{
-		case House: makingHouseP.type = Market; break;
-		case Market: makingHouseP.type = Farm; break;
-		case Farm: makingHouseP.type = House; break;
-		}
+		makingHouseP.type++;
+		if (makingHouseP.type == placeData.size()) makingHouseP.type = 0;
 	}
 	makingHouseP.pos = nowSelectedChip->THIS;
 	if (Input::MouseL.clicked && canSetPlace(makingHouseP.r, nowSelectedChip->THIS, makingHouseP.type))
 	{
-		SoundAsset(L"3").playMulti();
+		SoundAsset(L"3").playMulti(soundVolume);
 		setPlace(makingHouseP.r, nowSelectedChip->THIS, makingHouseP.type);
+		for (auto& u : units) if (u.enabled) u.workStopPenalty = false;
 	}
 }
 void setRoad()
@@ -67,11 +129,12 @@ void setRoad()
 			Point b = nowSelectedChip->THIS;
 			if (getChip(a).getPlace() != NULL) a = getChip(a).getPlace()->getEntrancePos();
 			if (getChip(b).getPlace() != NULL) b = getChip(b).getPlace()->getEntrancePos();
-			if (!isConnectedByLand(a, b)) SoundAsset(L"8").playMulti();
+			if (!isConnectedByLand(a, b)) SoundAsset(L"8").playMulti(soundVolume);
 			else
 			{
-				SoundAsset(L"3").playMulti();
+				SoundAsset(L"3").playMulti(soundVolume);
 				setRoadAToB(a, b);
+				for (auto& u : units) if (u.enabled) u.workStopPenalty = false;
 			}
 		}
 		previousSelectedChip = NULL;
@@ -85,7 +148,7 @@ void destroyPlace()
 	if (Input::MouseL.clicked)
 	{
 		selectedPlace->erase();
-		SoundAsset(L"4").playMulti();
+		SoundAsset(L"4").playMulti(soundVolume);
 	}
 }
 void destroyRoad()
@@ -111,7 +174,7 @@ void destroyRoad()
 				}
 			}
 			mapTexture = Texture(mapImage);	//Texture‚É”½‰f
-			SoundAsset(L"4").playMulti();
+			SoundAsset(L"4").playMulti(soundVolume);
 		}
 		previousSelectedChip = NULL;
 	}
@@ -121,17 +184,19 @@ void destroyRoad()
 }
 void UpdateInterface()
 {
-	const Rect interfaceRect(Point(0, Window::Size().y - 96), Point(640, 96));
+	const Rect interfaceRect(Point(0, Window::Size().y - 64), Point(640, 64));
 	interfaceRect.draw(Palette::Gray).drawFrame(8, 0, Palette::Darkgray);
 	if (interfaceRect.mouseOver) mouseOverInterface = true;
 	else mouseOverInterface = false;
 
-	if (setButton(19, Point(16, Window::Size().y - 80), DestroyPlaceMode))	SoundAsset(L"11").playMulti();
-	if (setButton(11, Point(80, Window::Size().y - 80), MakingVillageMode)) SoundAsset(L"11").playMulti();
-	if (setButton(7, Point(144, Window::Size().y - 80), MakingHouseMode))	SoundAsset(L"11").playMulti();
-	if (setButton(15, Point(208, Window::Size().y - 80), SettingRoadMode))	SoundAsset(L"11").playMulti();
-	if (setButton(17, Point(272, Window::Size().y - 80), DestroyRoadMode))	SoundAsset(L"11").playMulti();
-	if (setButton(21, Point(336, Window::Size().y - 80), UnitFallDownMode))	SoundAsset(L"11").playMulti();
+	if (setButton(9, Point(8, Window::Size().y - 56), DestroyPlaceMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(5, Point(8 + 48 * 1, Window::Size().y - 56), MakingVillageMode, Point(48, 48))) SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(3, Point(8 + 48 * 2, Window::Size().y - 56), MakingHouseMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(7, Point(8 + 48 * 3, Window::Size().y - 56), SettingRoadMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(8, Point(8 + 48 * 4, Window::Size().y - 56), DestroyRoadMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(10, Point(8 + 48 * 5, Window::Size().y - 56), UnitFallDownMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(11, Point(8 + 48 * 6, Window::Size().y - 56), MakingFarmMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(12, Point(8 + 48 * 7, Window::Size().y - 56), DestroyFarmMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
 	if (!mouseOverInterface)
 	{
 		switch (iMode)
@@ -144,6 +209,8 @@ void UpdateInterface()
 		case MakingHouseMode:makeHouse(); break;
 		case SettingRoadMode: setRoad(); break;
 		case UnitFallDownMode:unitFallDown(); break;
+		case MakingFarmMode: makeFarm(); break;
+		case DestroyFarmMode: destroyFarm(); break;
 		default:
 			break;
 		}

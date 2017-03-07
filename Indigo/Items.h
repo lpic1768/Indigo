@@ -38,6 +38,15 @@ public:
 				return max;
 			}
 		}
+		for (int i = 0; i < ITEM_MAX; i++)
+		{
+			if (amount[i] == 0)
+			{
+				id[i] = _id;
+				amount[i] = max;
+				return max;
+			}
+		}
 		return 0;
 	}
 	int		pullItem(const int& _id, const int& _amount)	//’l‚Ío—ˆ‚½”
