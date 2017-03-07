@@ -1,5 +1,10 @@
 #include"Basic.h"
 Unit units[UnitMax];
+void Unit::erase()
+{
+	if (home.getPlace() != NULL) for (auto& p : places) if (p.enabled && home.getPlace() == &p) p.capacity--;
+	reset();
+}
 void Unit::reset()
 {
 	tarPos = Point(0, 0);
@@ -236,7 +241,7 @@ void	Unit::drawBody() const
 	if (!enabled) return;
 
 	const double unitRadius = 8.0;
-	const Color unitColor = HSV(jobType * 90);
+	const Color unitColor = HSV(jobType * 45);
 
 	//Root‚Ì•\Ž¦
 	if (isMoving)
@@ -251,6 +256,7 @@ void	Unit::drawBody() const
 	}
 
 	Circle(getRealPos(), unitRadius).draw(unitColor).drawFrame(0, 2, Palette::Black);
+	if (needFood) Circle(getRealPos(), unitRadius).draw(Palette::White);
 
 	//Item‚Ì•\Ž¦
 	int j = 12;
@@ -268,6 +274,13 @@ void	Unit::update(const int& _actionPoint)
 {
 	if (!enabled) return;
 	int actionPoint = _actionPoint;	//’l‚ÌˆÚ“®
+	if ((sec < 3600 * 6 && sec + actionPoint >= 3600 * 6) || (sec < 3600 * 18 && sec + actionPoint >= 3600 * 18))
+	{
+		if (needFood) erase();
+		else needFood = true;
+	}
+	if (sec < 3600 * 6 && sec + actionPoint >= 3600 * 6) workStopPenalty = false;
+	if (sec < 3600 * 18 && sec + actionPoint >= 3600 * 18) workStopPenalty = true;
 
 	for (;;)
 	{
@@ -323,7 +336,7 @@ void	Unit::update(const int& _actionPoint)
 					}
 					else if (!goToTakeItem(Sake) && !goToTakeItem(Wheat)) timerMax = 3600;
 				}
-				else if(!workStopPenalty)
+				else if (!workStopPenalty)
 				{
 					switch (jobType)
 					{
@@ -335,15 +348,15 @@ void	Unit::update(const int& _actionPoint)
 							getChip(pos).getPlace()->items.addItem(Wheat, items.getNumItem(Wheat));
 							items.pullItem(Wheat, items.getNumItem(Wheat));
 
-							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome)))  workStopPenalty = true;
 						}
 						else if (items.getNumAllItem() >= 10)
 						{
-							if (!goTo(GoToHome)) timerMax = 3600;
+							if (!goTo(GoToHome)) workStopPenalty = true;
 						}
 						else if (!getChip(pos).isFarm || getChip(pos).growth % 2 == 1)
 						{
-							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) workStopPenalty = true;
 						}
 						else
 						{
@@ -355,8 +368,8 @@ void	Unit::update(const int& _actionPoint)
 							else
 							{
 								getChip(pos).growth++;
-								timerMax = 180;
 							}
+							timerMax = 1800;
 							getChip(pos).isUsedByUnit = false;
 						}
 						break;
@@ -365,22 +378,22 @@ void	Unit::update(const int& _actionPoint)
 						{
 							getChip(pos).getPlace()->items.addItem(Wood, items.getNumItem(Wood));
 							items.pullItem(Wood, items.getNumItem(Wood));
-							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) workStopPenalty = true;
 						}
 						else if (items.getNumAllItem() >= 10)
 						{
-							if (!goTo(GoToHome)) timerMax = 3600;
+							if (!goTo(GoToHome)) workStopPenalty = true;
 						}
 						else if (!getChip(pos).isForest || getChip(pos).growth != 3)
 						{
-							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) timerMax = 3600;
+							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) workStopPenalty = true;
 						}
 						else
 						{
 							getChip(pos).isUsedByUnit = false;
 							getChip(pos).growth = 0;
-							items.addItem(Wood, 10);
-							timerMax = 360;
+							items.addItem(Wood, 5);
+							timerMax = 1800;
 						}
 						break;
 					case Merchant:
@@ -389,7 +402,7 @@ void	Unit::update(const int& _actionPoint)
 					case Brewer:
 						if (items.getNumItem(Wheat) == 0)
 						{
-							if (getPlace() == NULL || getPlace()->items.getNumItem(Wheat) == 0) { if (!goToTakeItem(Wheat)) timerMax = 3600; }
+							if (getPlace() == NULL || getPlace()->items.getNumItem(Wheat) == 0) { if (!goToTakeItem(Wheat)) workStopPenalty = true; }
 							else
 							{
 								getPlace()->items.pullItem(Wheat, 1);
@@ -398,7 +411,7 @@ void	Unit::update(const int& _actionPoint)
 						}
 						else if (items.getNumItem(Wood) == 0)
 						{
-							if (getPlace() == NULL || getPlace()->items.getNumItem(Wood) == 0) { if (!goToTakeItem(Wood)) timerMax = 3600; }
+							if (getPlace() == NULL || getPlace()->items.getNumItem(Wood) == 0) { if (!goToTakeItem(Wood)) workStopPenalty = true; }
 							else
 							{
 								getPlace()->items.pullItem(Wood, 1);
@@ -407,7 +420,7 @@ void	Unit::update(const int& _actionPoint)
 						}
 						else
 						{
-							if (getPlace() != home.getPlace()) { if (!goTo(GoToHome)) timerMax = 3600; }
+							if (getPlace() != home.getPlace()) { if (!goTo(GoToHome)) workStopPenalty = true; }
 							else
 							{
 								items.pullItem(Wheat, 1);

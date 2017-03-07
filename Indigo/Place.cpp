@@ -5,7 +5,7 @@ Place* selectedPlace = NULL;
 void	Place::reset()
 {
 	enabled = false;
-	type = House;
+	type = 0;
 	items.reset(1000);
 	pos = Point(0, 0);
 	r = 0;
@@ -16,6 +16,7 @@ void	Place::drawFrame(const int& _type) const
 	const int frameWidth = 4;
 
 	if (!enabled) return;
+
 	const Rect drawRect = getDrawRect();
 	if (_type == 1)	//åöê›åvâÊéû
 	{
@@ -24,6 +25,7 @@ void	Place::drawFrame(const int& _type) const
 	else drawRect.drawFrame(frameWidth, 0, Palette::Black);
 
 	const int inlineRoadWidth = 36;
+	
 	switch (r)
 	{
 	case 0:
@@ -39,6 +41,7 @@ void	Place::drawFrame(const int& _type) const
 		Rect(Point(getChip(getEntrancePos()).THIS*ChipImageSize).movedBy(14, ChipImageSize - frameWidth), inlineRoadWidth, frameWidth).draw(RoadColor);
 		break;
 	}
+	
 }
 
 void	Place::drawName(const int& _type) const

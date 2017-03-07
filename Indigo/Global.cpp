@@ -20,11 +20,9 @@ void updateAll()
 	else if (Input::KeySpace.pressed) timeSpeed = 500;
 	else if (Input::KeyShift.pressed) timeSpeed = 50;
 	else timeSpeed = 1;
-	sec += timeSpeed;
 	for (auto& u : units) u.update(timeSpeed);
 	if (getHour() >= 24)
 	{
-		for (auto& u : units) if (u.enabled) u.workStopPenalty = false;
 		sec -= 3600 * 24;
 		month++;
 		if (month == 12) month = 0;
@@ -40,7 +38,6 @@ void updateAll()
 				getChip(x, y).isUsedByUnit = false;
 			}
 		}
-		for (auto& u : units) if (u.enabled) u.needFood = true;
 	}
 	for (int i = 0; i < timeSpeed * 10; i++)
 	{
@@ -50,6 +47,7 @@ void updateAll()
 			if (getChip(pos).growth < 3) getChip(pos).growth++;
 		}
 	}
+	sec += timeSpeed;
 }
 void drawAll()
 {
@@ -67,12 +65,8 @@ void drawAll()
 	{
 		//’n–Ê‚Ì•`‰æ
 		for (int x = xMin; x < xMax; x++)
-		{
 			for (int y = yMin; y < yMax; y++)
-			{
 				chips[x][y].drawGround();
-			}
-		}
 
 		//placesFrame‚Ì•`‰æ
 		for (auto& p : places) p.drawFrame();

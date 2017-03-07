@@ -181,9 +181,7 @@ void setRoadAToB(const Point& _posA, const Point& _posB);
 void drawPlannedRoadAToB(const Point& _posA, const Point& _posB);
 void resetTemp();
 
-#define House 0
-#define Market 1
-#define Farm 2
+#define Market 0
 
 #define Laborer		0
 #define Farmer		1
@@ -205,6 +203,7 @@ void resetTemp();
 class Unit
 {
 public:
+	void	Unit::erase();
 	void	Unit::reset();
 	bool	Unit::set(const Vec2& _globalPos);
 	void	Unit::drawBody() const;
