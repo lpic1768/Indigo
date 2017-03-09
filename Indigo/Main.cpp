@@ -64,6 +64,6 @@ void Main()
 
 
 
-		font.draw(Format(L"Platanus\n", month + 1, L"月 ", getHour(), L"時 ", getMinute(), L"分"));
+		font(L"Platanus\n", month + 1, L"月 ", getHour(), L"時 ", getMinute(), L"分").draw();
 	}
 }
