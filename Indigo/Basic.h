@@ -6,17 +6,17 @@ class Chip;
 class Unit;
 class Place;
 class PPointer;
-#define RoadColor Palette::Khaki
-#define PlainsColor Palette::Green
-#define ForestColor Palette::Darkgreen
-#define OceanColor Palette::Blue
-#define FarmColor Color(143,87,31)
-#define ChipImageSize	64	//ƒ`ƒbƒv‰æ‘œ‚Ì‘å‚«‚³
+const Color RoadColor = Palette::Khaki;
+const Color PlainsColor = Palette::Green;
+const Color ForestColor = Palette::Darkgreen;
+const Color OceanColor = Palette::Blue;
+const Color FarmColor = Color(143,87,31);
+#define ChipImageSize	64	//ãƒãƒƒãƒ—ç”»åƒã®å¤§ãã•
 #define RoadWidth		45.2
-#define ChipXMax 2048	//ƒ`ƒbƒv‚Ì•ÛØ‚·‚éÅ‘å’l
-#define ChipYMax 2048	//ƒ`ƒbƒv‚Ì•ÛØ‚·‚éÅ‘å’l
+#define ChipXMax 2048	//ãƒãƒƒãƒ—ã®ä¿è¨¼ã™ã‚‹æœ€å¤§å€¤
+#define ChipYMax 2048	//ãƒãƒƒãƒ—ã®ä¿è¨¼ã™ã‚‹æœ€å¤§å€¤
 
-//ƒOƒ[ƒoƒ‹ŠÖ”
+//ã‚°ãƒ­ãƒ¼ãƒãƒ«é–¢æ•°
 void updateAll();
 void drawAll();
 void InitAll();
@@ -45,7 +45,7 @@ extern Array<Unit*> selectedUnits;
 extern bool mouseOverInterface;
 extern Texture mapTexture;
 
-//ƒOƒ[ƒoƒ‹ƒ^ƒCƒ}
+//ã‚°ãƒ­ãƒ¼ãƒãƒ«ã‚¿ã‚¤ãƒ
 extern int sec;
 extern int month;
 extern int year;
@@ -53,7 +53,7 @@ int getHour();
 int getMinute();
 bool isNight();
 //Interface
-void UpdateInterface();	//draw‚àŒ“‚Ë‚é
+void UpdateInterface();	//drawã‚‚å…¼ã­ã‚‹
 
 struct PlaceData
 {
@@ -94,7 +94,7 @@ public:
 	Point	Place::getSize() const;
 	Point	Place::getEntrancePos() const;
 	Rect	Place::getDrawRect() const { return Rect(pos*ChipImageSize, getSize()*ChipImageSize); }
-	void	Place::drawFrame(const int& _type = 0) const;	//‚à‚µA_type==1‚È‚ç‚ÎÔ•\¦
+	void	Place::drawFrame(const int& _type = 0) const;	//ã‚‚ã—ã€_type==1ãªã‚‰ã°èµ¤è¡¨ç¤º
 	void	Place::drawName(const int& _type = 0) const;
 	void	Place::reset();
 	void	Place::set(const int& _r, const Point& _pos, const int& _t);
@@ -105,11 +105,11 @@ public:
 public:
 
 	int		Place::capacity;
-	int		Place::r;		//Œü‚«
+	int		Place::r;		//å‘ã
 	bool	Place::enabled;
-	int		Place::type;	//Œš•¨‚Ìƒ^ƒCƒv
+	int		Place::type;	//å»ºç‰©ã®ã‚¿ã‚¤ãƒ—
 	Items	Place::items;
-	Point	Place::pos;		//Œš•¨‚Ì¶ã‚ÌˆÊ’u
+	Point	Place::pos;		//å»ºç‰©ã®å·¦ä¸Šã®ä½ç½®
 
 	int		Place::THIS;
 };
@@ -166,9 +166,9 @@ public:
 	bool	Chip::isRoad;
 	bool	Chip::isLand;
 
-	int		Chip::number;	//”Ä—p		’Êí0‚Å‚ ‚é‚±‚Æ‚ğ•ÛØ‚·‚é
-	int		Chip::ang;		//”Ä—pAng	’Êí0‚Å‚ ‚é‚±‚Æ‚ğ•ÛØ‚µ‚È‚¢
-	bool	Chip::flag;		//”Ä—pƒtƒ‰ƒO’Êífalse‚Å‚ ‚é‚±‚Æ‚ğ•ÛØ‚·‚é
+	int		Chip::number;	//æ±ç”¨		é€šå¸¸æ™‚0ã§ã‚ã‚‹ã“ã¨ã‚’ä¿è¨¼ã™ã‚‹
+	int		Chip::ang;		//æ±ç”¨Ang	é€šå¸¸æ™‚0ã§ã‚ã‚‹ã“ã¨ã‚’ä¿è¨¼ã—ãªã„
+	bool	Chip::flag;		//æ±ç”¨ãƒ•ãƒ©ã‚°é€šå¸¸æ™‚falseã§ã‚ã‚‹ã“ã¨ã‚’ä¿è¨¼ã™ã‚‹
 
 	Point	Chip::THIS;
 };
@@ -237,12 +237,12 @@ public:
 	bool	Unit::isMoving;
 	double	Unit::movingSpeed;
 	Vec2	Unit::movingAng;
-	int		Unit::timerNow;	//”Ä—pƒ^ƒCƒ}
-	int		Unit::timerMax;	//”Ä—pƒ^ƒCƒ}
-	bool	Unit::workStopPenalty;	//true‚ÌŠÔd–‚ğs‚í‚È‚¢BfalseğŒ‚ÍŒš•¨‚Ì•Ï‰»‚ÆŠÔ‚Ì•Ï‰»
+	int		Unit::timerNow;	//æ±ç”¨ã‚¿ã‚¤ãƒ
+	int		Unit::timerMax;	//æ±ç”¨ã‚¿ã‚¤ãƒ
+	bool	Unit::workStopPenalty;	//trueã®é–“ä»•äº‹ã‚’è¡Œã‚ãªã„ã€‚falseæ¡ä»¶ã¯å»ºç‰©ã®å¤‰åŒ–ã¨æ™‚é–“ã®å¤‰åŒ–
 	int		Unit::progress;
-	Point	Unit::pos;		//“à•”À•W	Chip‚ÉŠî‚Ã‚­
-	Vec2	Unit::addPos;		//’Ç‰ÁÀ•WBŒš•¨“à•”‚âAˆÚ“®’†‚ğ•\‚·
+	Point	Unit::pos;		//å†…éƒ¨åº§æ¨™	Chipã«åŸºã¥ã
+	Vec2	Unit::addPos;		//è¿½åŠ åº§æ¨™ã€‚å»ºç‰©å†…éƒ¨ã‚„ã€ç§»å‹•ä¸­ã‚’è¡¨ã™
 
 	int		Unit::THIS;
 };
