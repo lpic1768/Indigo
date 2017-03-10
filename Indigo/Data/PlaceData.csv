@@ -1,6 +1,6 @@
-CodeName,PlaceName,Size,EntrancePos,MainColor,UnitCapacity,isHome,isWorkPlace,JobType
-Market,–â‰®,"(4,4)",1,"(255,255,0,255)",10,false,true,3
-TreeHouse,–Ø‚±‚è¬‰®,"(3,3)",1,"(0,0,128,255)",10,false,true,2
-Barn,”[‰®,"(3,3)",1,"(128,255,128)",10,false,true,1
-Brewery,ø‘¢Š,"(3,3)",1,"(0,0,255)",10,false,true,4
-CheckPoint,ŠÖŠ,"(1,3)",1,"(128,128,128)",0,false,false,0
+CodeName,PlaceName,Size,EntrancePos,MainColor,UnitCapacity,isStorage,isWorkPlace,JobType,ItemMax
+Market,–â‰®,"(4,4)",1,"(255,255,0,255)",10,true,true,3,1000
+TreeHouse,–Ø‚±‚è¬‰®,"(3,3)",1,"(0,0,128,255)",10,false,true,2,100
+Barn,”[‰®,"(3,3)",1,"(128,255,128)",10,false,true,1,100
+Brewery,ø‘¢Š,"(3,3)",1,"(0,0,255)",10,false,true,4,100
+CheckPoint,ŠÖŠ,"(1,3)",1,"(128,128,128)",0,false,false,0,0

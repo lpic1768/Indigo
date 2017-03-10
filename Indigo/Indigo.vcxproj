@@ -280,6 +280,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Place.cpp" />
     <ClCompile Include="Unit.cpp" />
+    <ClCompile Include="UnitAI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Basic.h" />

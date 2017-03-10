@@ -1,4 +1,4 @@
-#include"Basic.h"
+swd#include"Basic.h"
 
 Chip chips[ChipXMax][ChipYMax];
 int chipX = ChipXMax;
@@ -11,15 +11,16 @@ Chip* newnowSelectedChip = NULL;
 Chip* temp[1000000];
 void	Chip::reset()
 {
-	this->number = 0;
-	this->isRoad = false;
-	this->isLand = false;
+	number = 0;
+	isRoad = false;
+	isLand = false;
 	setPlace(NULL);
-	this->flag = false;
+	flag = false;
 	isForest = false;
 	isFarm = false;
 	growth = 0;
 	isUsedByUnit = false;
+	numItem = 0;
 }
 
 PerlinNoise noise(Random(2048));

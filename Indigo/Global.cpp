@@ -9,213 +9,10 @@ Array<Unit*> selectedUnits;
 int sec = 0;
 int month = 0;
 int year = 0;
+int culturePoint = 0;
 int getHour() { return  sec / 3600; } //0Å`23Ç‹Ç≈
 int getMinute() { return (sec / 60) % 60; }
-bool isNight() { return getHour() <= 5 || getHour() >= 17; }
-void updateAll()
-{
-	//unitÇÃupdate
-	int timeSpeed = 1;
-	if (Input::KeyEnter.pressed) timeSpeed = 5000;
-	else if (Input::KeySpace.pressed) timeSpeed = 500;
-	else if (Input::KeyShift.pressed) timeSpeed = 50;
-	else timeSpeed = 1;
-	for (auto& u : units) u.update(timeSpeed);
-	if (getHour() >= 24)
-	{
-		sec -= 3600 * 24;
-		month++;
-		if (month == 12) month = 0;
-		for (int x = 0; x < chipX; x++)
-		{
-			for (int y = 0; y < chipY; y++)
-			{
-				if (getChip(x, y).isFarm)
-				{
-					if (getChip(x, y).growth % 2 == 1 && getChip(x, y).growth / 2 == month - 3) getChip(x, y).growth++;
-					else getChip(x, y).growth = 1;
-				}
-				getChip(x, y).isUsedByUnit = false;
-			}
-		}
-	}
-	for (int i = 0; i < timeSpeed * 10; i++)
-	{
-		Point pos(Random(0, chipX - 1), Random(0, chipY - 1));
-		if (getChip(pos).isForest)
-		{
-			if (getChip(pos).growth < 3) getChip(pos).growth++;
-		}
-	}
-	sec += timeSpeed;
-}
-void drawAll()
-{
-	Vec2 p1 = Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) / Graphics2D::GetTransform()._11;
-	Vec2 p2 = (Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) + Window::Size()) / Graphics2D::GetTransform()._11;
-	int xMin = int(p1.x / ChipImageSize);
-	int yMin = int(p1.y / ChipImageSize);
-	int xMax = int(p2.x / ChipImageSize) + 1;
-	int yMax = int(p2.y / ChipImageSize) + 2;
-	if (xMin < 0) xMin = 0;
-	if (yMin < 0) yMin = 0;
-	if (xMax >= chipX) xMax = chipX - 1;
-	if (yMax >= chipY) yMax = chipY - 1;
-	if (Graphics2D::GetTransform()._11 > 0.1)
-	{
-		//ínñ ÇÃï`âÊ
-		for (int x = xMin; x < xMax; x++)
-			for (int y = yMin; y < yMax; y++)
-				chips[x][y].drawGround();
-
-		//placesFrameÇÃï`âÊ
-		for (auto& p : places) p.drawFrame();
-
-		//roadÇÃï`âÊ
-		for (int x = xMin; x < xMax; x++)
-			for (int y = yMin; y < yMax; y++)
-				chips[x][y].drawRoad(Palette::Black, 44);
-		for (int x = xMin; x < xMax; x++)
-			for (int y = yMin; y < yMax; y++)
-				chips[x][y].drawRoad(RoadColor, 36);
-
-		//placeÇÃñºëOÇÃï`âÊ
-		for (auto& p : places) p.drawName();
-
-		//unitÇÃï`âÊ
-		for (auto& u : units) u.drawBody();
-
-		for (int x = xMin; x < xMax; x++)
-			for (int y = yMin; y < yMax; y++)
-				if (getChip(x, y).isForest) TextureAsset(L"forest")(32 * getChip(x, y).growth, 0, 32, 64).resize(64, 128).drawAt((Point(x, y)*ChipImageSize).movedBy(ChipImageSize / 2, ChipImageSize / 2 - 32));
-				else if (getChip(x, y).isFarm) TextureAsset(L"farm")(32 * (getChip(x, y).growth / 2), 0, 32, 64).resize(64, 128).drawAt((Point(x, y)*ChipImageSize).movedBy(ChipImageSize / 2, ChipImageSize / 2 - 32));
-	}
-	else
-	{
-		mapTexture.resize(chipX * ChipImageSize, chipY*ChipImageSize).draw();
-		//placeÇÃñºëOÇÃï`âÊ
-		for (auto& p : places) p.drawName();
-
-		//unitÇÃï`âÊ
-		for (auto& u : units) u.drawBody();
-	}
-
-	Rect selectedArea;
-	if (nowSelectedChip != NULL && previousSelectedChip != NULL)
-	{
-		if (previousSelectedChip->THIS.x < nowSelectedChip->THIS.x)
-		{
-			selectedArea.x = (previousSelectedChip->THIS.x)*ChipImageSize;
-			selectedArea.w = (nowSelectedChip->THIS.x - previousSelectedChip->THIS.x)*ChipImageSize + ChipImageSize;
-		}
-		else
-		{
-			selectedArea.x = (nowSelectedChip->THIS.x)*ChipImageSize;
-			selectedArea.w = (previousSelectedChip->THIS.x - nowSelectedChip->THIS.x)*ChipImageSize + ChipImageSize;
-		}
-		if (previousSelectedChip->THIS.y < nowSelectedChip->THIS.y)
-		{
-			selectedArea.y = (previousSelectedChip->THIS.y)*ChipImageSize;
-			selectedArea.h = (nowSelectedChip->THIS.y - previousSelectedChip->THIS.y)*ChipImageSize + ChipImageSize;
-		}
-		else
-		{
-			selectedArea.y = (nowSelectedChip->THIS.y)*ChipImageSize;
-			selectedArea.h = (previousSelectedChip->THIS.y - nowSelectedChip->THIS.y)*ChipImageSize + ChipImageSize;
-		}
-	}
-	switch (iMode)
-	{
-	case None:
-		break;
-	case DestroyPlaceMode:
-		if (selectedPlace != NULL) Rect(selectedPlace->pos*ChipImageSize, selectedPlace->getSize()*ChipImageSize).draw(Color(255, 0, 0, 128));
-		break;
-	case DestroyRoadMode:
-		if (nowSelectedChip != NULL && previousSelectedChip != NULL) selectedArea.draw(Color(255, 0, 0, 128));
-		break;
-	case MakingFarmMode:
-		if (nowSelectedChip != NULL && previousSelectedChip != NULL) selectedArea.draw(Color(255, 0, 0, 128));
-		break;
-	case DestroyFarmMode:
-		if (nowSelectedChip != NULL && previousSelectedChip != NULL) selectedArea.draw(Color(255, 0, 0, 128));
-		break;
-	case MakingVillageMode:
-		break;
-	case MakingHouseMode:
-		makingHouseP.drawFrame(1); makingHouseP.drawName(1);
-		break;
-	case SettingRoadMode:
-		if (previousSelectedChip != NULL && nowSelectedChip != NULL)
-		{
-			Point a = previousSelectedChip->THIS;
-			Point b = nowSelectedChip->THIS;
-			if (getChip(a).getPlace() != NULL) a = getChip(a).getPlace()->getEntrancePos();
-			if (getChip(b).getPlace() != NULL) b = getChip(b).getPlace()->getEntrancePos();
-			drawPlannedRoadAToB(a, b);
-		}
-		break;
-	case UnitFallDownMode:
-		nowSelectedChip->getDrawRect().draw(Color(255, 255, 0, 128));
-		break;
-	default:
-		break;
-	}
-
-	//nowSelectedChip & selectedPlaceÇÃê›íË
-	Mouse::ClearTransform();
-	nowMousePosAsGlobalVec2 = Vec2((Vec2(-Graphics2D::GetTransform()._31, -Graphics2D::GetTransform()._32) + Mouse::Pos()) / Graphics2D::GetTransform()._11);
-	const Point mousePosAsChipPoint(nowMousePosAsGlobalVec2.x / ChipImageSize, nowMousePosAsGlobalVec2.y / ChipImageSize);
-	if (mousePosAsChipPoint.x >= 0 && mousePosAsChipPoint.y >= 0 && mousePosAsChipPoint.x < chipX && mousePosAsChipPoint.y < chipY) nowSelectedChip = &getChip(mousePosAsChipPoint);
-	if (nowSelectedChip != NULL) selectedPlace = nowSelectedChip->getPlace();
-	else selectedPlace = NULL;
-
-	//ÉÜÉjÉbÉgÇÃëIë
-	if (iMode != None) selectedUnits.clear();
-	if (Input::MouseL.clicked)
-	{
-		if (selectedUnits.size() > 0 && nowSelectedChip != NULL && nowSelectedChip->getPlace() != NULL)
-		{
-			for (auto& u : selectedUnits)
-			{
-				if (u->setPlace(nowSelectedChip->getPlace())) SoundAsset(L"9").playMulti(soundVolume);
-				else SoundAsset(L"10").playMulti(soundVolume);
-			}
-		}
-		selectedUnits.clear();
-		previousMousePosAsGlobalVec2 = nowMousePosAsGlobalVec2;
-	}
-	if (Input::MouseL.released)
-	{
-		Vec2 pmp1 = previousMousePosAsGlobalVec2;
-		Vec2 pmp2 = nowMousePosAsGlobalVec2;
-		if (pmp1.x > pmp2.x)
-		{
-			pmp1.x = nowMousePosAsGlobalVec2.x;
-			pmp2.x = previousMousePosAsGlobalVec2.x;
-		}
-		if (pmp1.y > pmp2.y)
-		{
-			pmp1.y = nowMousePosAsGlobalVec2.y;
-			pmp2.y = previousMousePosAsGlobalVec2.y;
-		}
-		for (auto& u : units)
-		{
-			if (u.enabled && pmp1.x <= u.getRealPos().x && u.getRealPos().x <= pmp2.x && pmp1.y <= u.getRealPos().y &&  u.getRealPos().y <= pmp2.y) { selectedUnits.push_back(&u); }
-		}
-	}
-	const Rect selectedRect(Point(previousMousePosAsGlobalVec2.x, previousMousePosAsGlobalVec2.y), Point(nowMousePosAsGlobalVec2.x - previousMousePosAsGlobalVec2.x, nowMousePosAsGlobalVec2.y - previousMousePosAsGlobalVec2.y));
-	if (Input::MouseL.pressed && iMode == None) selectedRect.draw(Color(255, 0, 0, 128));
-
-
-	for (auto& u : selectedUnits) Line(u->getRealPos(), nowMousePosAsGlobalVec2).draw(4, Palette::Red);
-
-	Graphics2D::ClearTransform();
-	const int alphaMax = 192;
-	const int alpha = abs(sec - 43200) * alphaMax / 14400 - alphaMax;
-	if (alpha >= alphaMax) Rect(0, 0, Window::Size()).draw(Color(0, 0, 0, alphaMax));
-	else if (alpha > 0) Rect(0, 0, Window::Size()).draw(Color(0, 0, 0, alpha));
-}
+bool isNight() { return sec < 21600 || 64800 < sec; }
 void InitAll()
 {
 	placeData.clear();
@@ -254,7 +51,10 @@ void InitAll()
 		}
 	}
 	mapTexture = Texture(mapImage);
-
+	year = 0;
+	month = 0;
+	sec = 43200;
+	culturePoint = 0;
 }
 bool SetVillage(const Point& _pos)
 {
@@ -366,7 +166,6 @@ bool setupByPOMS()
 					}
 				}
 			}
-
 			endFlag = true;
 			stopwatch.restart();
 			stopwatch.set(MillisecondsF(200));

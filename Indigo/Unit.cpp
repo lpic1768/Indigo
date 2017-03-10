@@ -10,6 +10,7 @@ void Unit::reset()
 	tarPos = Point(0, 0);
 	home.setPlace(NULL);
 	rootNow = 0;
+	needSake = false;
 	needFood = false;
 	rootMax = 0;
 	for (auto& r : rootTimer) r = 0.0;
@@ -27,6 +28,27 @@ void Unit::reset()
 	addPos = Vec2(0, 0);		//追加座標。建物内部や、移動中を表す
 	jobType = Laborer;
 	workStopPenalty = false;
+}
+bool	Unit::goTo(bool(*func)(Chip*)) {
+	temp[0] = &getChip(pos);
+	int c = 1;
+	for (int j = 0;; j++)
+	{
+		if (temp[j] == NULL) { resetTemp(); return false; }
+
+		if (func(temp[j])) {
+			return goTo(temp[j]->THIS);
+		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			if (canMove(temp[j]->getNearChip(i).THIS) && temp[j]->getNearChip(i).flag == false) {
+				temp[c] = &temp[j]->getNearChip(i);
+				temp[c]->flag = true;
+				c++;
+			}
+		}
+	}
 }
 bool Unit::goTo(const Point& _pos)
 {
@@ -153,14 +175,24 @@ bool Unit::goTo(const Point& _pos)
 	rootNow = 0;
 	return true;
 }
+
 bool	Unit::goTo(const int& _type)
 {
 	temp[0] = &getChip(pos);
 	int c = 1;
-	for (int j = 0;; j++)
+	for (int j = 0;;)
 	{
-		if (temp[j] == NULL) { resetTemp(); return false; }
+		for (int i = 0; i < 4; i++)
+		{
+			if (canMove(temp[j]->getNearChip(i).THIS) && temp[j]->getNearChip(i).flag == false) {
+				temp[c] = &temp[j]->getNearChip(i);
+				temp[c]->flag = true;
+				c++;
+			}
+		}
 
+		j++;
+		if (temp[j] == NULL) { resetTemp(); return false; }
 		switch (_type)
 		{
 		case GoToHome:
@@ -169,7 +201,7 @@ bool	Unit::goTo(const int& _type)
 			}
 			break;
 		case GoToForest:
-			if (temp[j]->isForest && temp[j]->growth == 3 && !temp[j]->isUsedByUnit)
+			if (temp[j]->isForest && temp[j]->growth >= 3 && !temp[j]->isUsedByUnit)
 			{
 				temp[j]->isUsedByUnit = true;
 				return goTo(temp[j]->THIS);
@@ -182,37 +214,19 @@ bool	Unit::goTo(const int& _type)
 				return goTo(temp[j]->THIS);
 			}
 			break;
-
 		default:
 			Println(L"goTo() Error 0x01");
 			resetTemp();
 			return false;
 		}
-
-
-		for (int i = 0; i < 4; i++)
-		{
-			if (canMove(temp[j]->getNearChip(i).THIS) && temp[j]->getNearChip(i).flag == false) {
-				temp[c] = &temp[j]->getNearChip(i);
-				temp[c]->flag = true;
-				c++;
-			}
-		}
 	}
 }
-bool	Unit::goToTakeItem(const int& _itemID)
+bool	Unit::goToTakeItem(const int& _itemID, const bool& _takeFromStrage)
 {
 	temp[0] = &getChip(pos);
 	int c = 1;
-	for (int j = 0;; j++)
+	for (int j = 0;;)
 	{
-		if (temp[j] == NULL) { resetTemp(); return false; }
-
-		if (temp[j]->getPlace() != NULL && temp[j]->getPlace()->items.getNumItem(_itemID) > 0) {
-			return goTo(temp[j]->THIS);
-		}
-
-
 		for (int i = 0; i < 4; i++)
 		{
 			if (canMove(temp[j]->getNearChip(i).THIS) && temp[j]->getNearChip(i).flag == false) {
@@ -221,6 +235,9 @@ bool	Unit::goToTakeItem(const int& _itemID)
 				c++;
 			}
 		}
+		j++;
+		if (temp[j] == NULL) { resetTemp(); return false; }
+		if (temp[j]->getPlace() != NULL && temp[j]->getPlace()->items.getNumItem(_itemID) > 0) { return goTo(temp[j]->THIS); }
 	}
 }
 bool Unit::set(const Vec2& _globalPos)
@@ -257,6 +274,10 @@ void	Unit::drawBody() const
 
 	Circle(getRealPos(), unitRadius).draw(unitColor).drawFrame(0, 2, Palette::Black);
 	if (needFood) Circle(getRealPos(), unitRadius).draw(Palette::White);
+	FontAsset(L"drawUnitItemFont")(progress).draw(getRealPos().movedBy(16, 0), Palette::Black);
+	Line(getRealPos(), getRealPos().movedBy(-timerMax / 10, 0)).draw(Palette::Red);
+	Line(getRealPos(), getRealPos().movedBy(-timerNow / 10, 0)).draw(Palette::Blue);
+
 
 	//Itemの表示
 	int j = 12;
@@ -276,11 +297,10 @@ void	Unit::update(const int& _actionPoint)
 	int actionPoint = _actionPoint;	//値の移動
 	if ((sec < 3600 * 6 && sec + actionPoint >= 3600 * 6) || (sec < 3600 * 18 && sec + actionPoint >= 3600 * 18))
 	{
-		if (needFood) erase();
+		if (sec + actionPoint >= 3600 * 18) needSake = true;
+		if (needFood) { erase(); return; }
 		else needFood = true;
 	}
-	if (sec < 3600 * 6 && sec + actionPoint >= 3600 * 6) workStopPenalty = false;
-	if (sec < 3600 * 18 && sec + actionPoint >= 3600 * 18) workStopPenalty = true;
 
 	for (;;)
 	{
@@ -320,123 +340,11 @@ void	Unit::update(const int& _actionPoint)
 					timerMax = int(rootTimer[rootNow]);
 				}
 			}
-			else
-			{
-				if (needFood)
-				{
-					if (getPlace() != NULL && getPlace()->items.getNumItem(Sake) != 0)
-					{
-						getPlace()->items.pullItem(Sake, 1);
-						needFood = false;
-					}
-					else if (getPlace() != NULL && getPlace()->items.getNumItem(Wheat) != 0)
-					{
-						getPlace()->items.pullItem(Wheat, 1);
-						needFood = false;
-					}
-					else if (!goToTakeItem(Sake) && !goToTakeItem(Wheat)) timerMax = 3600;
-				}
-				else if (!workStopPenalty)
-				{
-					switch (jobType)
-					{
-					case Laborer: workStopPenalty = true;
-						break;
-					case Farmer:
-						if (getChip(pos).getPlace() == home.getPlace() && home.getPlace() != NULL)
-						{
-							getChip(pos).getPlace()->items.addItem(Wheat, items.getNumItem(Wheat));
-							items.pullItem(Wheat, items.getNumItem(Wheat));
-
-							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome)))  workStopPenalty = true;
-						}
-						else if (items.getNumAllItem() >= 10)
-						{
-							if (!goTo(GoToHome)) workStopPenalty = true;
-						}
-						else if (!getChip(pos).isFarm || getChip(pos).growth % 2 == 1)
-						{
-							if (!goTo(GoToFarm) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) workStopPenalty = true;
-						}
-						else
-						{
-							if (getChip(pos).growth == 12)
-							{
-								getChip(pos).growth = 1;
-								items.addItem(Wheat, 5);
-							}
-							else
-							{
-								getChip(pos).growth++;
-							}
-							timerMax = 1800;
-							getChip(pos).isUsedByUnit = false;
-						}
-						break;
-					case Lumberjack:
-						if (getChip(pos).getPlace() == home.getPlace() && home.getPlace() != NULL)
-						{
-							getChip(pos).getPlace()->items.addItem(Wood, items.getNumItem(Wood));
-							items.pullItem(Wood, items.getNumItem(Wood));
-							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) workStopPenalty = true;
-						}
-						else if (items.getNumAllItem() >= 10)
-						{
-							if (!goTo(GoToHome)) workStopPenalty = true;
-						}
-						else if (!getChip(pos).isForest || getChip(pos).growth != 3)
-						{
-							if (!goTo(GoToForest) && (getChip(pos).getPlace() == home.getPlace() || !goTo(GoToHome))) workStopPenalty = true;
-						}
-						else
-						{
-							getChip(pos).isUsedByUnit = false;
-							getChip(pos).growth = 0;
-							items.addItem(Wood, 5);
-							timerMax = 1800;
-						}
-						break;
-					case Merchant:
-						timerMax = 3600;
-						break;
-					case Brewer:
-						if (items.getNumItem(Wheat) == 0)
-						{
-							if (getPlace() == NULL || getPlace()->items.getNumItem(Wheat) == 0) { if (!goToTakeItem(Wheat)) workStopPenalty = true; }
-							else
-							{
-								getPlace()->items.pullItem(Wheat, 1);
-								items.addItem(Wheat, 1);
-							}
-						}
-						else if (items.getNumItem(Wood) == 0)
-						{
-							if (getPlace() == NULL || getPlace()->items.getNumItem(Wood) == 0) { if (!goToTakeItem(Wood)) workStopPenalty = true; }
-							else
-							{
-								getPlace()->items.pullItem(Wood, 1);
-								items.addItem(Wood, 1);
-							}
-						}
-						else
-						{
-							if (getPlace() != home.getPlace()) { if (!goTo(GoToHome)) workStopPenalty = true; }
-							else
-							{
-								items.pullItem(Wheat, 1);
-								items.pullItem(Wood, 1);
-								getPlace()->items.addItem(Sake, 1);
-								timerMax = 3600;
-							}
-						}
-						break;
-					default: workStopPenalty = true; break;
-					}
-				}
-				else return;
-			}
+			else if (!canMove(pos)) { erase(); return; }	//ユニットの消去フラグ
+			else unitAI();
 		}
 	}
+	if (sec < 21600) workStopPenalty = false;
 
 }
 Vec2	Unit::getRealPos() const

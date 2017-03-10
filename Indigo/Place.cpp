@@ -86,6 +86,7 @@ void	Place::erase()
 void	Place::set(const int& _r, const Point& _pos, const int& _t)
 {
 	type = _t;
+	items.reset(placeData[type].itemMax);
 	pos = _pos;
 	r = _r;
 	if (!canSetPlace(_r, _pos, _t)) return;
@@ -131,7 +132,7 @@ Point	Place::getSize() const
 Color	Place::getDrawColor() const { return placeData[type].color; }
 String	Place::getNameAsString() const { return placeData[type].name; }
 int		Place::getCapacityMax() const { return placeData[type].capacityMax; }
-bool	Place::isHouse() const { return placeData[type].isHouse; }
+bool	Place::isStorage() const { return placeData[type].isStorage; }
 bool	Place::isWorkPlace() const { return placeData[type].isWorkPlace; }
 int		Place::getJobType() const { return placeData[type].jobType; }
 Point	Place::getEntrancePos() const

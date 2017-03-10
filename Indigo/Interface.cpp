@@ -92,15 +92,6 @@ void unitFallDown()
 		}
 	}
 }
-void makeVillage()
-{
-	if (nowSelectedChip == NULL || !nowSelectedChip->isLand) return;
-	if (Input::MouseL.clicked)
-	{
-		SoundAsset(L"6").playMulti(soundVolume);
-		SetVillage(nowSelectedChip->THIS);
-	}
-}
 void makeHouse()
 {
 	if (nowSelectedChip == NULL) return;
@@ -190,13 +181,20 @@ void UpdateInterface()
 	else mouseOverInterface = false;
 
 	if (setButton(9, Point(8, Window::Size().y - 56), DestroyPlaceMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
-	if (setButton(5, Point(8 + 48 * 1, Window::Size().y - 56), MakingVillageMode, Point(48, 48))) SoundAsset(L"11").playMulti(soundVolume);
-	if (setButton(3, Point(8 + 48 * 2, Window::Size().y - 56), MakingHouseMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
-	if (setButton(7, Point(8 + 48 * 3, Window::Size().y - 56), SettingRoadMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
-	if (setButton(8, Point(8 + 48 * 4, Window::Size().y - 56), DestroyRoadMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
-	if (setButton(10, Point(8 + 48 * 5, Window::Size().y - 56), UnitFallDownMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
-	if (setButton(11, Point(8 + 48 * 6, Window::Size().y - 56), MakingFarmMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
-	if (setButton(12, Point(8 + 48 * 7, Window::Size().y - 56), DestroyFarmMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(3, Point(8 + 48 * 1, Window::Size().y - 56), MakingHouseMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(7, Point(8 + 48 * 2, Window::Size().y - 56), SettingRoadMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(8, Point(8 + 48 * 3, Window::Size().y - 56), DestroyRoadMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(10, Point(8 + 48 * 4, Window::Size().y - 56), UnitFallDownMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(11, Point(8 + 48 * 5, Window::Size().y - 56), MakingFarmMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (setButton(12, Point(8 + 48 * 6, Window::Size().y - 56), DestroyFarmMode, Point(48, 48)))	SoundAsset(L"11").playMulti(soundVolume);
+	if (Input::Key1.clicked) iMode = None;
+	if (Input::Key2.clicked) iMode = DestroyPlaceMode;
+	if (Input::Key4.clicked) iMode = MakingHouseMode;
+	if (Input::Key5.clicked) iMode = SettingRoadMode;
+	if (Input::Key6.clicked) iMode = DestroyRoadMode;
+	if (Input::Key7.clicked) iMode = UnitFallDownMode;
+	if (Input::Key8.clicked) iMode = MakingFarmMode;
+	if (Input::Key9.clicked) iMode = DestroyFarmMode;
 	if (!mouseOverInterface)
 	{
 		switch (iMode)
@@ -205,7 +203,6 @@ void UpdateInterface()
 			break;
 		case DestroyPlaceMode: destroyPlace(); break;
 		case DestroyRoadMode:destroyRoad(); break;
-		case MakingVillageMode:makeVillage(); break;
 		case MakingHouseMode:makeHouse(); break;
 		case SettingRoadMode: setRoad(); break;
 		case UnitFallDownMode:unitFallDown(); break;

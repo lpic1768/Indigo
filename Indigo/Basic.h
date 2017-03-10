@@ -17,8 +17,6 @@ class PPointer;
 #define ChipYMax 2048	//チップの保証する最大値
 
 //グローバル関数
-void updateAll();
-void drawAll();
 void InitAll();
 bool SetVillage(const Point& _pos);
 
@@ -29,7 +27,6 @@ enum IMode
 	None,
 	DestroyPlaceMode,
 	DestroyRoadMode,
-	MakingVillageMode,
 	MakingHouseMode,
 	SettingRoadMode,
 	UnitFallDownMode,
@@ -49,6 +46,7 @@ extern Texture mapTexture;
 extern int sec;
 extern int month;
 extern int year;
+extern int culturePoint;
 int getHour();
 int getMinute();
 bool isNight();
@@ -65,17 +63,19 @@ struct PlaceData
 		entraceY = reader.getOr<int>(_type, 3, 0);
 		color = reader.getOr<Color>(_type, 4, Color(0, 0, 0, 255));
 		capacityMax = reader.getOr<int>(_type, 5, 0);
-		isHouse = reader.getOr<bool>(_type, 6, false);
+		isStorage = reader.getOr<bool>(_type, 6, false);
 		isWorkPlace = reader.getOr<bool>(_type, 7, false);
 		jobType = reader.getOr<int>(_type, 8, 0);
+		itemMax = reader.getOr<int>(_type, 9, 0);
 	}
 	String	name;
 	Point	size;
 	int		entraceY;
 	Color	color;
 	int		capacityMax;
+	int		itemMax;
 	int		jobType;
-	bool	isHouse;
+	bool	isStorage;
 	bool	isWorkPlace;
 };
 extern Array<PlaceData> placeData;
@@ -99,7 +99,7 @@ public:
 	void	Place::reset();
 	void	Place::set(const int& _r, const Point& _pos, const int& _t);
 	int		Place::getCapacityMax() const;
-	bool	Place::isHouse() const;
+	bool	Place::isStorage() const;
 	bool	Place::isWorkPlace() const;
 	int		Place::getJobType() const;
 public:
@@ -165,7 +165,7 @@ public:
 	int		Chip::growth;
 	bool	Chip::isRoad;
 	bool	Chip::isLand;
-
+	int		Chip::numItem;
 	int		Chip::number;	//汎用		通常時0であることを保証する
 	int		Chip::ang;		//汎用Ang	通常時0であることを保証しない
 	bool	Chip::flag;		//汎用フラグ通常時falseであることを保証する
@@ -209,10 +209,12 @@ public:
 	void	Unit::drawBody() const;
 	void	Unit::update(const int& _actionPoint);
 	bool	Unit::goTo(const Point& _pos);
+	bool	Unit::goTo(bool(*func)(Chip*));
 	bool	Unit::goTo(const int& _type);
-	bool	Unit::goToTakeItem(const int& _itemID);
+	bool	Unit::goToTakeItem(const int& _itemID, const bool& _takeFromStrage = true);
 	Vec2	Unit::getRealPos() const;
 	bool	Unit::setPlace(Place* _p);
+	void	Unit::unitAI();
 	bool	Unit::canMove(const Point& _p)
 	{
 		if (getChip(_p).isRoad ||
@@ -222,6 +224,7 @@ public:
 	}
 	Place*	Unit::getPlace() { return getChip(pos).getPlace(); }
 public:
+	bool	Unit::needSake;
 	bool	Unit::needFood;
 	Point	Unit::tarPos;
 	PPointer Unit::home;
